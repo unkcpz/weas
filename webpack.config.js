@@ -1,14 +1,18 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/index.js', // module's entry point
+  entry: './src/index.js',
   output: {
-    filename: 'jsae.js',
+    filename: 'weas.mjs', // changed to .mjs extension
     path: path.resolve(__dirname, 'dist'),
-    library: 'jsae',
-    libraryTarget: 'umd',
+    library: {
+      type: 'module' // set type as module
+    },
     globalObject: 'this'
   },
-  // Add babel-loader, plugins, and other configurations as needed
+  experiments: {
+    outputModule: true // enable ECMAScript module output
+  },
+  // ... other configurations like module rules for Babel, plugins, etc.
 };
 
