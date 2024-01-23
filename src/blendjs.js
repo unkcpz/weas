@@ -52,6 +52,7 @@ export class BlendJS {
         this.init();
     }
     init() {
+        // this.scene.background = new THREE.Color(0xFFFFFF); // Set the scene's background to white
         // Create a renderer
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(this.containerElement.clientWidth, this.containerElement.clientHeight);
@@ -64,14 +65,30 @@ export class BlendJS {
 		labelRenderer.domElement.style.pointerEvents = 'none';
         this.addRenderer('LabelRenderer', labelRenderer);
         // Create a camera
-        this.camera = new THREE.PerspectiveCamera(50, this.containerElement.clientWidth / this.containerElement.clientHeight, 1, 500);
+        // this.camera = new THREE.PerspectiveCamera(50, this.containerElement.clientWidth / this.containerElement.clientHeight, 1, 500);
+        const frustumSize = 20; // This can be adjusted based on your scene's scale
+        const aspect = this.containerElement.clientWidth / this.containerElement.clientHeight;
+        const frustumHalfHeight = frustumSize / 2;
+        const frustumHalfWidth = frustumHalfHeight * aspect;
+
+        this.camera = new THREE.OrthographicCamera(
+            -frustumHalfWidth,   // left
+            frustumHalfWidth,    // right
+            frustumHalfHeight,   // top
+            -frustumHalfHeight,  // bottom
+            1,                   // near clipping plane
+            2000                 // far clipping plane
+        );
+        // Set initial camera position
+        this.camera.position.set(100, 100, 100);
+        this.camera.lookAt(0, 0, 0);
         // Create a light
         const light = new THREE.DirectionalLight( 0xffffff, 2.5 );
         light.position.set( 1, 1, 1 );
         this.addLight('MainLight', light);
         const light1 = new THREE.DirectionalLight( 0xffffff, 2.5 );
-        light1.position.set( 1, 1, -1 );
-        this.addLight('MainLight', light);
+        light1.position.set( -1, -1, -1 );
+        this.addLight('SideLight', light1);
         const ambientLight = new THREE.AmbientLight(0x404040, 20); // Soft white light
         this.addLight('AmbientLight', ambientLight);
         // OrbitControls for camera movement

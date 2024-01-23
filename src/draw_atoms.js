@@ -4,7 +4,8 @@ import { covalentRadii, elementColors } from './atoms_data.js';
 const defaultColor = 0xffffff;
 
 
-export function drawAtoms(scene, atoms, scale = 0.4) {
+export function drawAtoms(scene, atoms, scaleAtom, vizTypes) {
+    let scale = 1;
     // Create a basic sphere geometry for all atoms
     const atomGeometry = new THREE.SphereGeometry(1, 32, 32); // Unit sphere
     const material = new THREE.MeshPhongMaterial({
@@ -26,6 +27,15 @@ export function drawAtoms(scene, atoms, scale = 0.4) {
         const position = new THREE.Vector3(...atoms.positions[globalIndex]);
         const dummy = new THREE.Object3D();
         dummy.position.copy(position);
+        if (vizTypes[globalIndex] === 0) {
+            scale = scaleAtom*1;
+        } else if (vizTypes[globalIndex] === 1) {
+            scale = scaleAtom*0.6;
+        } else if (vizTypes[globalIndex] === 2) {
+            scale = scaleAtom*0.6;
+        } else if (vizTypes[globalIndex] === 3) {
+            scale = scaleAtom*0;
+        }
         dummy.scale.set(radius * scale, radius * scale, radius * scale);
         dummy.updateMatrix();
         instancedMesh.setMatrixAt(globalIndex, dummy.matrix);
