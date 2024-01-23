@@ -134,10 +134,7 @@ const covalentRadii = {
     Am: 1.80, Cm: 1.69,};
 
 
-const elementsWithPolyhedra = [
-    "Ti", "Zr", "Hf", "Cr", "Mo", "W", "V", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Sr", "Y", "Zr",
-    "Nb", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "Ba", "La", "Ce", "Pr", "Nd", "Sm", "Eu", "Gd", "Tb",
-    "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hg", "Tl", "Pb", "Bi"
+const elementsWithPolyhedra = ["Ac", "Zr", "Pr", "Mo", "Li", "Ba", "Cd", "C", "Es", "Al", "Os", "V", "Sm", "Dy", "Ti", "Pb", "Ni", "Sr", "Na", "Lu", "Y", "Tb", "Au", "Be", "Sn", "Xe", "As", "Cr", "Ru", "Re", "Yb", "I", "Ag", "H", "Se", "Th", "In", "Pu", "Te", "W", "Ca", "Co", "Pd", "Tl", "B", "Br", "Rh", "Pa", "Tc", "Zn", "Eu", "Ta", "Cm", "Nb", "Hf", "La", "Ce", "Cf", "D", "U", "Mn", "Si", "Hg", "Cu", "Rb", "K", "Er", "NH", "Fe", "Ge", "Am", "P", "Tm", "Gd", "Ga", "Pm", "Bi", "Mg", "Sc", "Kr", "Sb", "Ir", "Po", "Bk", "F", "Ho", "Nd", "Cs", "Np", "Pt", "X",
 ];
 
 
