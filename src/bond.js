@@ -3,8 +3,8 @@ import {elementColors } from './atoms_data.js';
 import {findNeighbors } from './utils.js';
 
 
-export function drawBonds(scene, atoms, radius=0.10) {
-    const bonds = calculateBonds(atoms);
+export function drawBonds(scene, atoms, radius=0.10, vizTypes) {
+    const bonds = calculateBonds(atoms, vizTypes);
 
 
     bonds.forEach(([index1, index2]) => {
@@ -25,8 +25,15 @@ export function drawBonds(scene, atoms, radius=0.10) {
 
 
 
-export function calculateBonds(atoms) {
-    const neighbors = findNeighbors(atoms);
+export function calculateBonds(atoms, vizTypes) {
+    // indices is all atoms with vizType != 0
+    const indices = [];
+    for (let i = 0; i < vizTypes.length; i++) {
+        if (vizTypes[i] !== 0) {
+            indices.push(i);
+        }
+    }
+    const neighbors = findNeighbors(atoms, indices);
     const bondsData = buildBonds(neighbors);
     return bondsData;
 }

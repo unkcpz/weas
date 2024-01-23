@@ -1,13 +1,18 @@
 import * as THREE from 'three';
 import {covalentRadii } from './atoms_data.js';
 
-export function findNeighbors(atoms) {
+export function findNeighbors(atoms, indices=null) {
+    if (indices === null) {
+        indices = [...Array(atoms.positions.length).keys()];
+    }
     const neighbors = new Array(atoms.positions.length);
     for (let i = 0; i < neighbors.length; i++) {
         neighbors[i] = [];
     }
-
     for (let i = 0; i < atoms.positions.length; i++) {
+        if (!indices.includes(i)) {
+            continue;
+        }
         for (let j = i + 1; j < atoms.positions.length; j++) {
             const index1 = i;
             const index2 = j;
@@ -72,9 +77,9 @@ export function createHighlight(position, scale) {
     const highlightMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(0xffff00), // Yellow color
         transparent: true, // Make it transparent
-        opacity: 0.2, // Set the transparency level (0.0 to 1.0)
+        opacity: 0.5, // Set the transparency level (0.0 to 1.0)
     });
-    const scaleMultiplier = 1.1; // Adjust the scale factor as needed (1.1 makes it slightly larger)
+    const scaleMultiplier = 1.4; // Adjust the scale factor as needed (1.1 makes it slightly larger)
     const highlightedAtomMesh = new THREE.Mesh(highlightGeometry, highlightMaterial);
     highlightedAtomMesh.position.copy(position)
     // Scale the highlighted atom mesh
@@ -83,7 +88,6 @@ export function createHighlight(position, scale) {
         scale.y * scaleMultiplier,
         scale.z * scaleMultiplier
     );
-    console.log("highlightedAtomMesh: ", highlightedAtomMesh)
     return highlightedAtomMesh
 }
 

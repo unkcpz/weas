@@ -35,6 +35,8 @@ class AtomsViewer {
             'Stick': 3,
         };
         this.vizType = 1; // Default viz type
+        // vizTypes has the same length of the atoms
+        this.vizTypes = new Array(this.atoms.getAtomsCount()).fill(this.vizType);
         this.showCell = true; // Default show cell
         this.labelType = 'none'; // Default label type
         this.atomScale = 0.6; // Default atom scale
@@ -138,7 +140,7 @@ class AtomsViewer {
         // Remove the selected atom symbol element
         // this.tjs.containerElement.removeChild(this.selectedAtomSymbolElement);
         // Remove the selected atom mesh group
-        this.tjs.scene.remove(this.selectedAtomMesh);
+        // this.tjs.scene.remove(this.selectedAtomMesh);
         // Remove the atom labels
         this.atomLabels.forEach(label => this.tjs.scene.remove(label));
         // Remove the unit cell
@@ -163,7 +165,6 @@ class AtomsViewer {
             // after moving the atoms, the intersection does not work anymore
             // redraw the model to make it work
             // this is a temporary solution
-            console.log("atoms: ", this.atoms)
             // it can also update the bonds, etc
             this.drawModel();
             this.dispatchAtomsUpdated();
@@ -295,28 +296,32 @@ class AtomsViewer {
 
     drawModel( vizType=null ) {
         this.dispose();
-        if ( vizType == null ) {
-            vizType = this.vizType;
+        if ( vizType !== null ) {
+            if (this.selectedAtoms.size > 0) {
+                this.selectedAtoms.forEach((atomIndex) => {
+                    this.vizTypes[atomIndex] = parseInt(vizType);
+                });
+            } else {
+                this.vizType = parseInt(vizType);
+                this.vizTypes = new Array(this.atoms.getAtomsCount()).fill(this.vizType);
+            }
         }
-        console.log("draw model: ", vizType);
         if (this.showCell) {
             drawUnitCell(this.tjs.scene, this.atoms);
             drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
         }
-        if ( vizType == 0 ) {
-            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1);
-        }
-        else if ( vizType == 1 ){
-            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
-            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
+        this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
+        if ( vizType == 1 ){
+            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
         }
         else if ( vizType == 2 ){
-            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
-            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
+            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
             drawPolyhedra(this.tjs.scene, this.atoms);
         }
         else {
-            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
         }
 
     }

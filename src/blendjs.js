@@ -52,6 +52,7 @@ export class BlendJS {
         this.init();
     }
     init() {
+        // this.scene.background = new THREE.Color(0xFFFFFF); // Set the scene's background to white
         // Create a renderer
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(this.containerElement.clientWidth, this.containerElement.clientHeight);
@@ -79,8 +80,8 @@ export class BlendJS {
             2000                 // far clipping plane
         );
         // Set initial camera position
-        this.camera.position.set(400, 400, 400);
-        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+        this.camera.position.set(0, -10, 0);
+        this.camera.lookAt(0, 0, 0);
         // Create a light
         const light = new THREE.DirectionalLight( 0xffffff, 2.5 );
         light.position.set( 1, 1, 1 );
