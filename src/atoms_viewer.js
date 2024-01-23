@@ -92,6 +92,15 @@ class AtomsViewer {
                 this.enterTransformMode('move', event);
             } else if (event.key === 'r') {
                 this.enterTransformMode('rotate', event);
+            } else if (event.key === '1') {
+                this.tjs.camera.position.set(0, 0, 100); // Example positions
+                this.tjs.camera.lookAt(0, 0, 0);
+            } else if (event.key === '2') {
+                this.tjs.camera.position.set(-100, 0, 0); // Example positions
+                this.tjs.camera.lookAt(0, 0, 0);
+            } else if (event.key === '3') {
+                this.tjs.camera.position.set(0, 100, 0); // Example positions
+                this.tjs.camera.lookAt(0, 0, 0);
             }
         });
         this.tjs.containerElement.addEventListener('mousemove', event => {
