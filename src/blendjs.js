@@ -80,7 +80,7 @@ export class BlendJS {
             2000                 // far clipping plane
         );
         // Set initial camera position
-        this.camera.position.set(0, -10, 0);
+        this.camera.position.set(100, 100, 100);
         this.camera.lookAt(0, 0, 0);
         // Create a light
         const light = new THREE.DirectionalLight( 0xffffff, 2.5 );

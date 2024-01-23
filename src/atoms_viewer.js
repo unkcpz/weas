@@ -23,6 +23,7 @@ class AtomsViewer {
         this.transformMode = null; // 'move' or 'rotate'
         this.mousePosition = new THREE.Vector2();
         this.initialAtomPositions = new Map(); // To store initial positions of selected atoms
+        this.backgroundColor = '#ffffff'; // Default background color (white)
         this.init();
     }
 
@@ -65,6 +66,11 @@ class AtomsViewer {
         // Add camera controls
         createViewpointButtons(gui, this.tjs.camera)
         setupCameraGUI(gui, this.tjs.camera, this.tjs.scene)
+        // Add background color controller
+        const backgroundFolder = gui.addFolder('Background');
+        backgroundFolder.addColor(this, 'backgroundColor').onChange(color => {
+            this.tjs.scene.background = new THREE.Color(color);
+        }).name('Color');
         //
         this.selectedAtomSymbolElement = document.createElement('div');
         this.selectedAtomSymbolElement.id = 'selectedAtomSymbol';
