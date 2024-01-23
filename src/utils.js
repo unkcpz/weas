@@ -86,3 +86,18 @@ export function createHighlight(position, scale) {
     console.log("highlightedAtomMesh: ", highlightedAtomMesh)
     return highlightedAtomMesh
 }
+
+
+export function getWorldPositionFromScreen(screenX, screenY, camera, plane) {
+    const ndc = new THREE.Vector2(
+        (screenX / window.innerWidth) * 2 - 1, 
+        -(screenY / window.innerHeight) * 2 + 1
+    );
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(ndc, camera);
+
+    const worldPosition = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, worldPosition);
+    return worldPosition;
+}

@@ -19,18 +19,4 @@ export function setupCameraGUI(gui, camera) {
         far: camera.far,
     };
 
-    cameraFolder.add(cameraParams, 'fov', 1, 180).onChange(function (value) {
-        camera.fov = value;
-        camera.updateProjectionMatrix();
-    }).name('FOV');
-
-    cameraFolder.add(cameraParams, 'near', 0.1, 100).onChange(function (value) {
-        camera.near = value;
-        camera.updateProjectionMatrix();
-    }).name('Near');
-
-    cameraFolder.add(cameraParams, 'far', 100, 2000).onChange(function (value) {
-        camera.far = value;
-        camera.updateProjectionMatrix();
-    }).name('Far');
 }

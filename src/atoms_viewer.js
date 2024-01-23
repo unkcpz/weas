@@ -6,9 +6,10 @@ import { drawBonds } from './bond.js';
 import { drawAtoms } from './draw_atoms.js';
 import { createViewpointButtons } from './viewpoint.js';
 import { setupCameraGUI } from './camera.js';
-import { clearObjects, createHighlight } from './utils.js';
+import { clearObjects, createHighlight, getWorldPositionFromScreen } from './utils.js';
 import { drawAtomLabels } from './draw_label.js';
 import {drawPolyhedra} from './polyhedra.js';
+import { covalentRadii } from './atoms_data.js';
 
 class AtomsViewer {
     constructor(tjs, atoms) {
@@ -19,6 +20,9 @@ class AtomsViewer {
         this.selectedAtoms = new Set(); // Store selected atoms
         this.selectedAtomMesh = new THREE.Group(); // Create a group for highlighted atoms
         this.tjs.scene.add(this.selectedAtomMesh); // Add it to the scene
+        this.transformMode = null; // 'move' or 'rotate'
+        this.mousePosition = new THREE.Vector2();
+        this.initialAtomPositions = new Map(); // To store initial positions of selected atoms
         this.init();
     }
 
@@ -32,6 +36,17 @@ class AtomsViewer {
     }
 
     onMouseClick(event) {
+        // Handle mouse click to exit the current transform mode.
+        if (this.transformMode) {
+            this.transformMode = null;
+            this.initialAtomPositions.clear();
+            // TODO: This is a temporary solution to fix the issue of intersection not working after moving atoms
+            // after moving the atoms, the intersection does not work anymore
+            // redraw the model to make it work
+            // this is a temporary solution
+            console.log("atoms: ", this.atoms)
+            this.changeVizType(this.vizType);
+        }
         // Calculate the distance the mouse moved
         const dx = event.clientX - this.mouseDownPosition.x;
         const dy = event.clientY - this.mouseDownPosition.y;
@@ -46,14 +61,19 @@ class AtomsViewer {
         const mouse = new THREE.Vector2();
 
         // Calculate mouse position in normalized device coordinates
-        const viewerRect = this.tjs.renderers["MainRenderer"].renderer.domElement.getBoundingClientRect();
+        const viewerRect = this.tjs.containerElement.getBoundingClientRect();
         mouse.x = ((event.clientX - viewerRect.left) / viewerRect.width) * 2 - 1;
         mouse.y = -((event.clientY - viewerRect.top) / viewerRect.height) * 2 + 1;
-
         // Update the picking ray
         raycaster.setFromCamera(mouse, this.tjs.camera);
 
         // Check for intersections with atom mesh
+        // Update the matrix for the instanced mesh
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Optionally, update the matrixWorld if it's been changed
+        this.instancedMesh.updateMatrixWorld();
+
         const intersects = raycaster.intersectObject(this.instancedMesh);
         // Check if there are intersections
         if (intersects.length > 0) {
@@ -154,26 +174,26 @@ class AtomsViewer {
 
     changeVizType( value ) {
 
+        console.log("draw model: ", value);
         clearObjects(this.tjs.scene, this.uuid);
 
         drawUnitCell(this.tjs.scene, this.atoms);
         drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
 
-
         if ( value == 0 ) {
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1);
         }
         else if ( value == 1 ){
-            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 0.4);
-            drawBonds(this.tjs.scene, this.atoms);
+            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
         }
         else if ( value == 2 ){
-            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 0.4);
-            drawBonds(this.tjs.scene, this.atoms);
+            this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
             drawPolyhedra(this.tjs.scene, this.atoms);
         }
         else {
-            drawBonds(this.tjs.scene, this.atoms);
+            drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
         }
 
     }
@@ -187,11 +207,12 @@ class AtomsViewer {
         let mesh = this.instancedMesh
         for (let i = 0; i < mesh.count; i++) {
             const instanceMatrix = new THREE.Matrix4();
+            const radius = covalentRadii[this.atoms.speciesArray[i]] || 1;
             mesh.getMatrixAt(i, instanceMatrix); // Get the original matrix of the instance
             // Decompose the original matrix into its components
             instanceMatrix.decompose(position, rotation, scale);
             // Set the scale to the new value
-            scale.set(this.atomScale, this.atomScale, this.atomScale);
+            scale.set(radius*this.atomScale, radius*this.atomScale, radius*this.atomScale);
             // Recompose the matrix with the new scale
             instanceMatrix.compose(position, rotation, scale);
             mesh.setMatrixAt(i, instanceMatrix);
@@ -213,6 +234,75 @@ class AtomsViewer {
         this.clearHighlight();
     }
 
+    enterTransformMode(mode, event) {
+        this.transformMode = mode;
+        this.initialMousePosition = this.mousePosition.clone();
+        this.storeInitialAtomPositions();
+    }
+
+    storeInitialAtomPositions() {
+        this.selectedAtoms.forEach((atomIndex) => {
+            const matrix = new THREE.Matrix4();
+            this.instancedMesh.getMatrixAt(atomIndex, matrix);
+            const position = new THREE.Vector3();
+            matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
+            this.initialAtomPositions.set(atomIndex, position.clone());
+        });
+    }
+
+    moveSelectedAtoms(event) {
+        const scale = 0.01; // Adjust the factor as needed
+        const movementPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        // Get the camera's forward direction (negative z-axis in world space)
+        const cameraDirection = new THREE.Vector3(0, 0, -1);
+        cameraDirection.applyQuaternion(this.tjs.camera.quaternion);
+        // Update the plane's normal
+        movementPlane.normal.copy(cameraDirection);
+        const currentWorldPosition = getWorldPositionFromScreen(event.clientX, event.clientY, this.tjs.camera, movementPlane);
+        const initialWorldPosition = getWorldPositionFromScreen(this.initialMousePosition.x, this.initialMousePosition.y, this.tjs.camera, movementPlane);
+
+        const movementVector = currentWorldPosition.sub(initialWorldPosition);
+
+        // Apply movementVector to your object
+        // For example, translating a selected atom
+        this.selectedAtoms.forEach((atomIndex) => {
+            const initialPosition = this.initialAtomPositions.get(atomIndex);
+            const newPosition = initialPosition.clone().add(movementVector);
+
+            // Update the atom position
+            const matrix = new THREE.Matrix4();
+            this.instancedMesh.getMatrixAt(atomIndex, matrix);
+            matrix.setPosition(newPosition);
+            this.instancedMesh.setMatrixAt(atomIndex, matrix);
+            this.atoms.positions[atomIndex] = newPosition;
+        });
+
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    rotateSelectedAtoms(event) {
+        const dx = event.clientX - this.initialMousePosition.x;
+    
+        // Convert screen displacement to rotation angle
+        // This is a very simplistic approach; you might need to refine it
+        const rotationAngle = THREE.MathUtils.degToRad(dx * 0.1); // Adjust the factor as needed
+    
+        this.selectedAtoms.forEach((atomIndex) => {
+            const initialPosition = this.initialAtomPositions.get(atomIndex);
+            
+            // Apply rotation around Y-axis (or any other axis as per your requirement)
+            const matrix = new THREE.Matrix4();
+            this.instancedMesh.getMatrixAt(atomIndex, matrix);
+            const position = new THREE.Vector3();
+            matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
+            position.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationAngle);
+            matrix.setPosition(position);
+            this.instancedMesh.setMatrixAt(atomIndex, matrix);
+        });
+    
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+    
 
     init() {
         this.atomLabels = [];
@@ -224,7 +314,8 @@ class AtomsViewer {
         };
         this.vizType = 1; // Default viz type
         this.labelType = 'none'; // Default label type
-        this.atomScale = 0.4; // Default atom scale
+        this.atomScale = 0.6; // Default atom scale
+        this.bondRadius = 0.1; // Default bond radius
         // Initialize Three.js scene, camera, and renderer
         // GUI
         // Create a div element for the GUI
@@ -262,12 +353,25 @@ class AtomsViewer {
         this.tjs.containerElement.addEventListener('pointerup', this.onMouseUp.bind(this), false);
         this.tjs.containerElement.addEventListener('click', this.onMouseClick.bind(this), false);
         // Add event listeners for keypress events
-        document.addEventListener('keydown', event => {
+        this.tjs.containerElement.setAttribute('tabindex', '0'); // '0' means it can be focused
+        this.tjs.containerElement.addEventListener('keydown', event => {
             if (event.key === 'Delete') {
-                // When 'X' key is pressed, delete selected atoms
                 this.deleteSelectedAtoms();
+            } else if (event.key === 'g') {
+                this.enterTransformMode('move', event);
+            } else if (event.key === 'r') {
+                this.enterTransformMode('rotate', event);
             }
         });
+        this.tjs.containerElement.addEventListener('mousemove', event => {
+            this.mousePosition.set(event.clientX, event.clientY);
+            if (this.transformMode === 'move') {
+                this.moveSelectedAtoms(event);
+            } else if (this.transformMode === 'rotate') {
+                this.rotateSelectedAtoms(event);
+            }
+        });
+        
 
         // Draw unit cell
         drawUnitCell(this.tjs.scene, this.atoms);

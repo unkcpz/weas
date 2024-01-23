@@ -3,9 +3,8 @@ import {elementColors } from './atoms_data.js';
 import {findNeighbors } from './utils.js';
 
 
-export function drawBonds(scene, atoms) {
+export function drawBonds(scene, atoms, radius=0.10) {
     const bonds = calculateBonds(atoms);
-    const radius = 0.15; // Radius of the cylinder
 
 
     bonds.forEach(([index1, index2]) => {
