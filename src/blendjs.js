@@ -64,7 +64,23 @@ export class BlendJS {
 		labelRenderer.domElement.style.pointerEvents = 'none';
         this.addRenderer('LabelRenderer', labelRenderer);
         // Create a camera
-        this.camera = new THREE.PerspectiveCamera(50, this.containerElement.clientWidth / this.containerElement.clientHeight, 1, 500);
+        // this.camera = new THREE.PerspectiveCamera(50, this.containerElement.clientWidth / this.containerElement.clientHeight, 1, 500);
+        const frustumSize = 20; // This can be adjusted based on your scene's scale
+        const aspect = this.containerElement.clientWidth / this.containerElement.clientHeight;
+        const frustumHalfHeight = frustumSize / 2;
+        const frustumHalfWidth = frustumHalfHeight * aspect;
+
+        this.camera = new THREE.OrthographicCamera(
+            -frustumHalfWidth,   // left
+            frustumHalfWidth,    // right
+            frustumHalfHeight,   // top
+            -frustumHalfHeight,  // bottom
+            1,                   // near clipping plane
+            2000                 // far clipping plane
+        );
+        // Set initial camera position
+        this.camera.position.set(400, 400, 400);
+        this.camera.lookAt(new THREE.Vector3(0, 0, 0));
         // Create a light
         const light = new THREE.DirectionalLight( 0xffffff, 2.5 );
         light.position.set( 1, 1, 1 );
