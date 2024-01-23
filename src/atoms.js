@@ -288,8 +288,30 @@ class Atoms {
             }
         }
     }
+    to_dict() {
+        const dict = {
+            species: {},
+            positions: [],
+            cell: Array.from(this.cell || []),
+            pbc: Array.from(this.pbc),
+            speciesArray: []
+        };
 
+        // Populate species dictionary
+        for (const [symbol, specie] of Object.entries(this.species)) {
+            dict.species[symbol] = [symbol, specie.atomicNumber];
+        }
+
+        // Populate positions and speciesArray
+        for (let i = 0; i < this.positions.length; i++) {
+            dict.positions.push(Array.from(this.positions[i]));
+            dict.speciesArray.push(this.speciesArray[i]);
+        }
+
+        return dict;
+    }
 }
+
 
 
 export { Species, Atom, Atoms };

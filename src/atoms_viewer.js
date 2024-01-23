@@ -26,6 +26,125 @@ class AtomsViewer {
         this.init();
     }
 
+    init() {
+        this.atomLabels = [];
+        this.VIZ_TYPE_MAP = {
+            'Ball': 0,
+            'Ball + Stick': 1,
+            'Polyhedra': 2,
+            'Stick': 3,
+        };
+        this.vizType = 1; // Default viz type
+        this.showCell = true; // Default show cell
+        this.labelType = 'none'; // Default label type
+        this.atomScale = 0.6; // Default atom scale
+        this.bondRadius = 0.1; // Default bond radius
+        // Initialize Three.js scene, camera, and renderer
+        // GUI
+        // Create a div element for the GUI
+        const guiContainer = document.createElement('div');
+        guiContainer.style.position = 'absolute';
+        guiContainer.style.top = '10px';
+        guiContainer.style.left = '10px'; // Adjust the position as needed
+        this.tjs.containerElement.appendChild(guiContainer);
+        // Apply styles to the GUI container
+
+        // Initialize the GUI inside the div element
+        const gui = new GUI(); // Create a new dat.GUI instance
+        guiContainer.appendChild(gui.domElement);
+
+        // Append the dat.GUI's DOM element to container
+        const atomsFolder = gui.addFolder('Atoms');
+		atomsFolder.add( {vizType: this.vizType,}, 'vizType', this.VIZ_TYPE_MAP ).onChange( this.drawModel.bind(this) ).name("Model Style");
+        // Add Label Type Controller
+        atomsFolder.add(this, 'labelType', ['none', 'symbol', 'index']).onChange(this.updateLabels.bind(this)).name('Atom Label');
+        // Add Atom Scale Controller
+        atomsFolder.add(this, 'atomScale', 0.1, 2.0).onChange(this.updateAtomScale.bind(this)).name('Atom Scale');
+        // Add camera controls
+        createViewpointButtons(gui, this.tjs.camera)
+        setupCameraGUI(gui, this.tjs.camera, this.tjs.scene)
+        //
+        this.selectedAtomSymbolElement = document.createElement('div');
+        this.selectedAtomSymbolElement.id = 'selectedAtomSymbol';
+        this.tjs.containerElement.appendChild(this.selectedAtomSymbolElement);
+        //
+        // Add mouse state tracking
+        this.isMouseDown = false;
+        this.mouseDownPosition = new THREE.Vector2();
+        // Bind event handlers
+        this.tjs.containerElement.addEventListener('pointerdown', this.onMouseDown.bind(this), false);
+        this.tjs.containerElement.addEventListener('pointerup', this.onMouseUp.bind(this), false);
+        this.tjs.containerElement.addEventListener('click', this.onMouseClick.bind(this), false);
+        // Add event listeners for keypress events
+        this.tjs.containerElement.setAttribute('tabindex', '0'); // '0' means it can be focused
+        this.tjs.containerElement.addEventListener('keydown', event => {
+            if (event.key === 'Delete') {
+                this.deleteSelectedAtoms();
+            } else if (event.key === 'g') {
+                this.enterTransformMode('move', event);
+            } else if (event.key === 'r') {
+                this.enterTransformMode('rotate', event);
+            }
+        });
+        this.tjs.containerElement.addEventListener('mousemove', event => {
+            this.mousePosition.set(event.clientX, event.clientY);
+            if (this.transformMode === 'move') {
+                this.moveSelectedAtoms(event);
+            } else if (this.transformMode === 'rotate') {
+                this.rotateSelectedAtoms(event);
+            }
+        });
+        
+
+        this.drawModel()
+
+        drawAtomLabels(this.tjs.scene, this.atoms, 'none', this.atomLabels);
+
+        // Set camera position
+        this.tjs.camera.position.z = 5;
+        // Full screen button
+        const fullscreenButton = document.createElement('button');
+        fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>'; // Font Awesome expand icon
+        fullscreenButton.style.position = 'absolute';
+        fullscreenButton.style.right = '10px';
+        fullscreenButton.style.top = '10px';
+        fullscreenButton.style.zIndex = 1000; // Make sure it's above other elements
+
+        // Append the button to the container
+        this.tjs.containerElement.appendChild(fullscreenButton);
+
+        // Event listener for the fullscreen button
+        fullscreenButton.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                this.tjs.containerElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+                fullscreenButton.innerHTML = '<i class="fas fa-compress"></i>'; // Change to compress icon
+            } else {
+                document.exitFullscreen();
+                fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>'; // Change back to expand icon
+            }
+        });
+
+    }
+
+    dispose() {
+        // Remove event listeners
+        this.tjs.containerElement.removeEventListener('pointerdown', this.onMouseDown, false);
+        this.tjs.containerElement.removeEventListener('pointerup', this.onMouseUp, false);
+        this.tjs.containerElement.removeEventListener('click', this.onMouseClick, false);
+        this.tjs.containerElement.removeEventListener('mousemove', this.onMouseMove, false);
+        this.tjs.containerElement.removeEventListener('keydown', this.onKeyDown, false);
+        // Remove the selected atom symbol element
+        // this.tjs.containerElement.removeChild(this.selectedAtomSymbolElement);
+        // Remove the selected atom mesh group
+        this.tjs.scene.remove(this.selectedAtomMesh);
+        // Remove the atom labels
+        this.atomLabels.forEach(label => this.tjs.scene.remove(label));
+        // Remove the unit cell
+        clearObjects(this.tjs.scene, this.uuid);
+    }
+
     onMouseDown(event) {
         this.isMouseDown = true;
         this.mouseDownPosition.set(event.clientX, event.clientY);
@@ -45,7 +164,9 @@ class AtomsViewer {
             // redraw the model to make it work
             // this is a temporary solution
             console.log("atoms: ", this.atoms)
-            this.changeVizType(this.vizType);
+            // it can also update the bonds, etc
+            this.drawModel();
+            this.dispatchAtomsUpdated();
         }
         // Calculate the distance the mouse moved
         const dx = event.clientX - this.mouseDownPosition.x;
@@ -172,22 +293,24 @@ class AtomsViewer {
         }
     }
 
-    changeVizType( value ) {
-
-        console.log("draw model: ", value);
-        clearObjects(this.tjs.scene, this.uuid);
-
-        drawUnitCell(this.tjs.scene, this.atoms);
-        drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
-
-        if ( value == 0 ) {
+    drawModel( vizType=null ) {
+        this.dispose();
+        if ( vizType == null ) {
+            vizType = this.vizType;
+        }
+        console.log("draw model: ", vizType);
+        if (this.showCell) {
+            drawUnitCell(this.tjs.scene, this.atoms);
+            drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
+        }
+        if ( vizType == 0 ) {
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1);
         }
-        else if ( value == 1 ){
+        else if ( vizType == 1 ){
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
             drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
         }
-        else if ( value == 2 ){
+        else if ( vizType == 2 ){
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, this.atomScale);
             drawBonds(this.tjs.scene, this.atoms, this.bondRadius);
             drawPolyhedra(this.tjs.scene, this.atoms);
@@ -229,9 +352,10 @@ class AtomsViewer {
         this.selectedAtoms.clear();
 
         // Update the visualization
-        this.changeVizType(this.vizType); // Reapply the visualization
+        this.drawModel(this.vizType); // Reapply the visualization
         this.clearAtomLabel(); // Clear the atom label
         this.clearHighlight();
+        this.dispatchAtomsUpdated();
     }
 
     enterTransformMode(mode, event) {
@@ -251,7 +375,6 @@ class AtomsViewer {
     }
 
     moveSelectedAtoms(event) {
-        const scale = 0.01; // Adjust the factor as needed
         const movementPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         // Get the camera's forward direction (negative z-axis in world space)
         const cameraDirection = new THREE.Vector3(0, 0, -1);
@@ -302,113 +425,13 @@ class AtomsViewer {
     
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
-    
 
-    init() {
-        this.atomLabels = [];
-        this.VIZ_TYPE_MAP = {
-            'Ball': 0,
-            'Ball + Stick': 1,
-            'Polyhedra': 2,
-            'Stick': 3,
-        };
-        this.vizType = 1; // Default viz type
-        this.labelType = 'none'; // Default label type
-        this.atomScale = 0.6; // Default atom scale
-        this.bondRadius = 0.1; // Default bond radius
-        // Initialize Three.js scene, camera, and renderer
-        // GUI
-        // Create a div element for the GUI
-        const guiContainer = document.createElement('div');
-        guiContainer.style.position = 'absolute';
-        guiContainer.style.top = '10px';
-        guiContainer.style.left = '10px'; // Adjust the position as needed
-        this.tjs.containerElement.appendChild(guiContainer);
-        // Apply styles to the GUI container
-
-        // Initialize the GUI inside the div element
-        const gui = new GUI(); // Create a new dat.GUI instance
-        guiContainer.appendChild(gui.domElement);
-
-        // Append the dat.GUI's DOM element to container
-        const atomsFolder = gui.addFolder('Atoms');
-		atomsFolder.add( {vizType: this.vizType,}, 'vizType', this.VIZ_TYPE_MAP ).onChange( this.changeVizType.bind(this) ).name("Model Style");
-        // Add Label Type Controller
-        atomsFolder.add(this, 'labelType', ['none', 'symbol', 'index']).onChange(this.updateLabels.bind(this)).name('Atom Label');
-        // Add Atom Scale Controller
-        atomsFolder.add(this, 'atomScale', 0.1, 2.0).onChange(this.updateAtomScale.bind(this)).name('Atom Scale');
-        // Add camera controls
-        createViewpointButtons(gui, this.tjs.camera)
-        setupCameraGUI(gui, this.tjs.camera, this.tjs.scene)
-        //
-        this.selectedAtomSymbolElement = document.createElement('div');
-        this.selectedAtomSymbolElement.id = 'selectedAtomSymbol';
-        this.tjs.containerElement.appendChild(this.selectedAtomSymbolElement);
-        //
-        // Add mouse state tracking
-        this.isMouseDown = false;
-        this.mouseDownPosition = new THREE.Vector2();
-        // Bind event handlers
-        this.tjs.containerElement.addEventListener('pointerdown', this.onMouseDown.bind(this), false);
-        this.tjs.containerElement.addEventListener('pointerup', this.onMouseUp.bind(this), false);
-        this.tjs.containerElement.addEventListener('click', this.onMouseClick.bind(this), false);
-        // Add event listeners for keypress events
-        this.tjs.containerElement.setAttribute('tabindex', '0'); // '0' means it can be focused
-        this.tjs.containerElement.addEventListener('keydown', event => {
-            if (event.key === 'Delete') {
-                this.deleteSelectedAtoms();
-            } else if (event.key === 'g') {
-                this.enterTransformMode('move', event);
-            } else if (event.key === 'r') {
-                this.enterTransformMode('rotate', event);
-            }
-        });
-        this.tjs.containerElement.addEventListener('mousemove', event => {
-            this.mousePosition.set(event.clientX, event.clientY);
-            if (this.transformMode === 'move') {
-                this.moveSelectedAtoms(event);
-            } else if (this.transformMode === 'rotate') {
-                this.rotateSelectedAtoms(event);
-            }
-        });
-        
-
-        // Draw unit cell
-        drawUnitCell(this.tjs.scene, this.atoms);
-        drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
-
-        this.changeVizType(this.vizType)
-
-        drawAtomLabels(this.tjs.scene, this.atoms, 'none', this.atomLabels);
-
-        // Set camera position
-        this.tjs.camera.position.z = 5;
-        // Full screen button
-        const fullscreenButton = document.createElement('button');
-        fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>'; // Font Awesome expand icon
-        fullscreenButton.style.position = 'absolute';
-        fullscreenButton.style.right = '10px';
-        fullscreenButton.style.top = '10px';
-        fullscreenButton.style.zIndex = 1000; // Make sure it's above other elements
-
-        // Append the button to the container
-        this.tjs.containerElement.appendChild(fullscreenButton);
-
-        // Event listener for the fullscreen button
-        fullscreenButton.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                this.tjs.containerElement.requestFullscreen().catch(err => {
-                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                });
-                fullscreenButton.innerHTML = '<i class="fas fa-compress"></i>'; // Change to compress icon
-            } else {
-                document.exitFullscreen();
-                fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>'; // Change back to expand icon
-            }
-        });
-
+    // Call this method after updating atoms
+    dispatchAtomsUpdated() {
+        const event = new CustomEvent('atomsUpdated', { detail: this.atoms });
+        this.tjs.containerElement.dispatchEvent(event);
     }
-
+    
 }
 
 export {AtomsViewer};
