@@ -87,8 +87,8 @@ export class BlendJS {
         light.position.set( 1, 1, 1 );
         this.addLight('MainLight', light);
         const light1 = new THREE.DirectionalLight( 0xffffff, 2.5 );
-        light1.position.set( 1, 1, -1 );
-        this.addLight('MainLight', light);
+        light1.position.set( -1, -1, -1 );
+        this.addLight('SideLight', light1);
         const ambientLight = new THREE.AmbientLight(0x404040, 20); // Soft white light
         this.addLight('AmbientLight', ambientLight);
         // OrbitControls for camera movement
