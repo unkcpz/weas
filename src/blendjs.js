@@ -93,7 +93,7 @@ export class BlendJS {
         this.addLight('AmbientLight', ambientLight);
         // OrbitControls for camera movement
         this.controls = new OrbitControls(this.camera, renderer.domElement);
-        this.controls.enableDamping = true; // Enable smooth camera movements
+        // this.controls.enableDamping = true; // Enable smooth camera movements
         // Add event listener for window resize
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
     }

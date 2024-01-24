@@ -3,24 +3,63 @@ import {elementColors } from './atoms_data.js';
 import {findNeighbors } from './utils.js';
 
 
+const defaultColor = 0xffffff;
+
+
 export function drawBonds(scene, atoms, radius=0.10, vizTypes) {
     const bonds = calculateBonds(atoms, vizTypes);
 
+    console.time("drawBonds Time");
 
-    bonds.forEach(([index1, index2]) => {
+    const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 8, 1); // Adjust segment count as needed
+
+    const instanceMatrix = new THREE.Matrix4();
+
+    // Creating two instanced meshes, one for each color in the bond
+    const material = new THREE.MeshPhongMaterial({
+        color: defaultColor,
+        specular: 0x222222,
+        shininess: 100,
+        reflectivity: 0.9, // Reflectivity strength for the environment map
+    });
+
+    const instancedMesh = new THREE.InstancedMesh(cylinderGeometry, material, bonds.length*2);
+
+    bonds.forEach(([index1, index2], instanceId) => {
         const position1 = new THREE.Vector3(...atoms.positions[index1]);
         const position2 = new THREE.Vector3(...atoms.positions[index2]);
+
+        // Setting color for each material
         const color1 = new THREE.Color(elementColors[atoms.species[atoms.speciesArray[index1]].symbol]);
         const color2 = new THREE.Color(elementColors[atoms.species[atoms.speciesArray[index2]].symbol]);
-        const material1 = new THREE.MeshPhongMaterial({ color: color1 }); // First color
-        const material2 = new THREE.MeshPhongMaterial({ color: color2 }); // Second color
 
-        const bondMesh = createCylinderBetweenPoints(position1, position2, radius, material1, material2);
-        bondMesh.userData.type = 'bond';
-        bondMesh.userData.symbol = index1 + '-' + index2;
-        bondMesh.userData.uuid = atoms.uuid;
-        scene.add(bondMesh);
+        // Calculate transformation for the cylinder
+        const midpoint = new THREE.Vector3().lerpVectors(position1, position2, 0.5);
+        const midpoint1 = new THREE.Vector3().lerpVectors(position1, midpoint, 0.5);
+        const midpoint2 = new THREE.Vector3().lerpVectors(midpoint, position2, 0.5);
+        const orientation = new THREE.Matrix4().lookAt(position1, position2, new THREE.Object3D().up);
+        const quaternion = new THREE.Quaternion().setFromRotationMatrix(orientation);
+
+        // Adjusting rotation to align with the bond direction
+        const adjustmentQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+        quaternion.multiply(adjustmentQuaternion);
+
+        const scale = new THREE.Vector3(radius, position1.distanceTo(position2) / 2, radius);
+        // Apply transformation to each instance
+        instanceMatrix.compose(midpoint1, quaternion, scale);
+        instancedMesh.setMatrixAt(2*instanceId, instanceMatrix);
+        instancedMesh.setColorAt(2*instanceId, color1);
+        //
+        instanceMatrix.compose(midpoint2, quaternion, scale);
+        instancedMesh.setMatrixAt(2*instanceId+1, instanceMatrix);
+        instancedMesh.setColorAt(2*instanceId+1, color2);
     });
+
+    instancedMesh.userData.type = 'bond';
+    instancedMesh.userData.uuid = atoms.uuid;
+
+    scene.add(instancedMesh);
+    console.timeEnd("drawBonds Time");
 }
 
 
@@ -80,9 +119,9 @@ export function createSingleBondSegment(start, end, radius, material) {
 }
 
 
-export function createCylinderBetweenPoints(point1, point2, radius, material1, material2) {
+export function createCylinderBetweenPoints(point1, point2, radius, material, material2) {
     const midpoint = new THREE.Vector3().addVectors(point1, point2).multiplyScalar(0.5);
-    const cylinder1 = createSingleBondSegment(point1, midpoint, radius, material1);
+    const cylinder1 = createSingleBondSegment(point1, midpoint, radius, material);
     const cylinder2 = createSingleBondSegment(midpoint, point2, radius, material2);
 
     const bondGroup = new THREE.Group();
@@ -91,3 +130,4 @@ export function createCylinderBetweenPoints(point1, point2, radius, material1, m
 
     return bondGroup;
 }
+
