@@ -30,7 +30,6 @@ export function findNeighbors(atoms, indices=null) {
         const radius1 = covalentRadii[species1] * 1.1 || 1;
         const pos1 = atoms.positions[index1];
         const point = {x: atoms.positions[index1][0], y: atoms.positions[index1][1], z: atoms.positions[index1][2]};
-
         // Find potential neighbors within the sum of radius1 and maximum possible radius2
         // Extract the species symbols (keys)
         const speciesKeys = Object.keys(atoms.species);

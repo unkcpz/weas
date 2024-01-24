@@ -417,34 +417,82 @@ class AtomsViewer {
             this.instancedMesh.getMatrixAt(atomIndex, matrix);
             matrix.setPosition(newPosition);
             this.instancedMesh.setMatrixAt(atomIndex, matrix);
-            this.atoms.positions[atomIndex] = newPosition;
+            this.atoms.positions[atomIndex] = [newPosition.x, newPosition.y, newPosition.z];
         });
 
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
 
     rotateSelectedAtoms(event) {
-        const dx = event.clientX - this.initialMousePosition.x;
+        // Calculate the centroid of the selected atoms
+        let centroid = new THREE.Vector3(0, 0, 0);
+        this.selectedAtoms.forEach((atomIndex) => {
+            centroid.add(this.initialAtomPositions.get(atomIndex));
+        });
+        centroid.divideScalar(this.selectedAtoms.size);
+
+        // Project the centroid to 2D screen space
+        const centroidScreen = centroid.clone().project(this.tjs.camera);
+
+        // Calculate normalized device coordinates of centroid, initial, and new mouse positions
+        const centroidNDC = new THREE.Vector2(centroidScreen.x, centroidScreen.y);
+        
+        const initialNDC = new THREE.Vector2(
+            (this.initialMousePosition.x / this.tjs.containerElement.clientWidth) * 2 - 1,
+            -(this.initialMousePosition.y / this.tjs.containerElement.clientHeight) * 2 + 1
+        );
+        const newNDC = new THREE.Vector2(
+            (event.clientX / this.tjs.containerElement.clientWidth) * 2 - 1,
+            -(event.clientY / this.tjs.containerElement.clientHeight) * 2 + 1
+        );
+        // Calculate vectors from centroidNDC to initialNDC and newNDC
+        const vectorToInitial = new THREE.Vector2().subVectors(initialNDC, centroidNDC);
+        const vectorToNew = new THREE.Vector2().subVectors(newNDC, centroidNDC);
+
+        // Normalize the vectors
+        vectorToInitial.normalize();
+        vectorToNew.normalize();
+
+        // Calculate the angle between the vectors
+        let rotationAngle = Math.acos(vectorToInitial.dot(vectorToNew));
+
+        // Determine the direction of rotation (clockwise or counterclockwise)
+        // Use the cross product (in 2D space, this is essentially the z-component of the cross product)
+        const crossProductZ = vectorToInitial.x * vectorToNew.y - vectorToInitial.y * vectorToNew.x;
+        if (crossProductZ < 0) {
+            rotationAngle = -rotationAngle; // Rotate in the opposite direction
+        }
+
+
+        // Get the camera's forward direction (negative z-axis in world space)
+        const cameraDirection = new THREE.Vector3(0, 0, -1);
+        cameraDirection.applyQuaternion(this.tjs.camera.quaternion);
     
-        // Convert screen displacement to rotation angle
-        // This is a very simplistic approach; you might need to refine it
-        const rotationAngle = THREE.MathUtils.degToRad(dx * 0.1); // Adjust the factor as needed
+        // Create a rotation matrix around the camera direction
+        const rotationMatrix = new THREE.Matrix4().makeRotationAxis(cameraDirection, -rotationAngle);
     
         this.selectedAtoms.forEach((atomIndex) => {
-            const initialPosition = this.initialAtomPositions.get(atomIndex);
-            
-            // Apply rotation around Y-axis (or any other axis as per your requirement)
+            const newPosition = this.initialAtomPositions.get(atomIndex).clone();
+            // Translate to the centroid, apply rotation, then translate back
             const matrix = new THREE.Matrix4();
             this.instancedMesh.getMatrixAt(atomIndex, matrix);
-            const position = new THREE.Vector3();
-            matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
-            position.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationAngle);
-            matrix.setPosition(position);
+            newPosition.sub(centroid) // Translate to centroid
+                   .applyMatrix4(rotationMatrix) // Apply rotation
+                   .add(centroid); // Translate back
+    
+            // Update the position
+            matrix.setPosition(newPosition);
             this.instancedMesh.setMatrixAt(atomIndex, matrix);
+    
+            // If you need to update the atoms.positions array
+            this.atoms.positions[atomIndex] = [newPosition.x, newPosition.y, newPosition.z];
         });
     
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
+    
+    
+    
 
     // Call this method after updating atoms
     dispatchAtomsUpdated() {

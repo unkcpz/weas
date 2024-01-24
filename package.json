@@ -1,11 +1,12 @@
 {
   "name": "weas",
-  "version": "0.0.5i",
+  "version": "0.0.5j",
+  "type": "module",
   "description": "The weas package, short for Web Environment for Atomic Structures, is a specialized JavaScript library designed to simplify and enhance the visualization and interaction with atomic and molecular structures in web environments.",
   "main": "src/index.js",
   "scripts": {
     "start": "live-server",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
     "build": "webpack --mode production"
   },
   "files": [
@@ -15,6 +16,7 @@
   "author": "Xing Wang",
   "license": "MIT",
   "devDependencies": {
+    "jest": "^29.7.0",
     "live-server": "^1.2.2",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
