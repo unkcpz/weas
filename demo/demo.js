@@ -14,7 +14,8 @@ const data = {'species': {'S': ['S', 16], 'O': ['O', 8], 'C': ['C', 6], 'H': ['H
        [1.1955575, 0.8529945, 1.7933215],
        [1.2441475, 1.7499375, 3.3527345]],
 'speciesArray': ['S', 'O', 'C', 'C', 'H', 'H', 'H', 'H', 'H', 'H']}
-const atoms = new Atoms(data);
+let atoms = new Atoms(data);
+atoms = atoms.multiply(1, 1, 1);
 const bjs = new BlendJS(viewerElement);
 const avr = new AtomsViewer(bjs, atoms);
 bjs.render();

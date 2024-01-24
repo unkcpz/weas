@@ -151,6 +151,8 @@ class Atoms {
 
     multiply(mx, my, mz) {
         const newAtoms = new Atoms();
+        // Copy species object
+        newAtoms.species = JSON.parse(JSON.stringify(this.species));
 
         // Update unit cell
         if (this.cell) {
@@ -181,9 +183,6 @@ class Atoms {
                 }
             }
         }
-
-        // Copy species array
-        newAtoms.species = Array.from(this.species);
 
         // Return the new Atoms object
         return newAtoms;

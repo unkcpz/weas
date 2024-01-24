@@ -33,10 +33,21 @@ export function calculateBonds(atoms, vizTypes) {
             indices.push(i);
         }
     }
+
+    // Start timer for findNeighbors
+    console.time("findNeighbors Time");
     const neighbors = findNeighbors(atoms, indices);
+    // End timer for findNeighbors
+    console.timeEnd("findNeighbors Time");
+    // Start timer for buildBonds
+    console.time("buildBonds Time");
     const bondsData = buildBonds(neighbors);
+    // End timer for buildBonds
+    console.timeEnd("buildBonds Time");
+
     return bondsData;
 }
+
 
 export function buildBonds(neighbors) {
     const bonds = [];
