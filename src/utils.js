@@ -1,45 +1,72 @@
 import * as THREE from 'three';
 import {covalentRadii } from './atoms_data.js';
+import { kdTree } from './kdTree.js';
 
 export function findNeighbors(atoms, indices=null) {
+    
     if (indices === null) {
         indices = [...Array(atoms.positions.length).keys()];
     }
-    const neighbors = new Array(atoms.positions.length);
-    for (let i = 0; i < neighbors.length; i++) {
-        neighbors[i] = [];
-    }
-    for (let i = 0; i < atoms.positions.length; i++) {
-        if (!indices.includes(i)) {
-            continue;
-        }
-        for (let j = i + 1; j < atoms.positions.length; j++) {
-            const index1 = i;
-            const index2 = j;
 
-            const species1 = atoms.species[atoms.speciesArray[index1]].symbol;
+    // Initialize neighbors array
+    const neighbors = new Array(atoms.positions.length).fill(null).map(() => []);
+
+    // Create k-d tree from atom positions
+    var distance = function(a, b){
+        return Math.pow(a.x - b.x, 2) +  Math.pow(a.y - b.y, 2) +  Math.pow(a.z - b.z, 2);
+      }
+
+    const positions = atoms.positions.map((pos, index) => ({
+        x: pos[0], 
+        y: pos[1], 
+        z: pos[2], 
+        index: index,
+    }));
+    const tree = new kdTree(positions, distance, ['x', 'y', 'z']);
+
+    // Iterate over each atom
+    indices.forEach(index1 => {
+        const species1 = atoms.species[atoms.speciesArray[index1]].symbol;
+        const radius1 = covalentRadii[species1] * 1.1 || 1;
+        const pos1 = atoms.positions[index1];
+        const point = {x: atoms.positions[index1][0], y: atoms.positions[index1][1], z: atoms.positions[index1][2]};
+
+        // Find potential neighbors within the sum of radius1 and maximum possible radius2
+        // Extract the species symbols (keys)
+        const speciesKeys = Object.keys(atoms.species);
+        // Map the species to their radii
+        const speciesRadii = speciesKeys.map(key => covalentRadii[atoms.species[key][0]]);
+        const maxRadius2 = Math.max(...Object.values(speciesRadii)) * 1.1 || 1;
+        // max neighbors is 12, which is the number of nearest neighbors in a face-centered cubic lattice
+        // the closest packed structure
+        const potentialNeighbors = tree.nearest(point, 12, (radius1+maxRadius2) ** 2);
+
+        potentialNeighbors.forEach(neighbor => {
+            const index2 = neighbor[0].index;
+            if (index1 >= index2) return;
+
             const species2 = atoms.species[atoms.speciesArray[index2]].symbol;
-
-            const pos1 = new Float32Array(atoms.positions[index1]);
-            const pos2 = new Float32Array(atoms.positions[index2]);
-
-            const distance = Math.sqrt(
-                Math.pow(pos1[0] - pos2[0], 2) +
-                Math.pow(pos1[1] - pos2[1], 2) +
-                Math.pow(pos1[2] - pos2[2], 2)
-            );
-
-            const radius1 = covalentRadii[species1] * 1.1 || 1;
             const radius2 = covalentRadii[species2] * 1.1 || 1;
+            const pos2 = atoms.positions[index2];
 
+            const distance = calculateDistance(pos1, pos2);
             if (distance < radius1 + radius2) {
-                neighbors[index1].push(index2); // Add index2 as a neighbor of index1
-                neighbors[index2].push(index1); // Add index1 as a neighbor of index2
+                neighbors[index1].push(index2);
+                neighbors[index2].push(index1);
             }
-        }
-    }
+        });
+    });
 
     return neighbors;
+}
+
+// Helper function to calculate distance between two points
+function calculateDistance(point1, point2) {
+    return Math.sqrt(
+        Math.pow(point1[0] - point2[0], 2) +
+        Math.pow(point1[1] - point2[1], 2) +
+        Math.pow(point1[2] - point2[2], 2)
+    );
 }
 
 export function clearObjects(scene, uuid=null) {

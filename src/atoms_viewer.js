@@ -326,16 +326,16 @@ class AtomsViewer {
             drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
         }
         this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
-        if ( vizType == 1 ){
+        if ( this.vizType === 1 ){
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
             drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
         }
-        else if ( vizType == 2 ){
+        else if ( this.vizType === 2 ){
             this.instancedMesh = drawAtoms(this.tjs.scene, this.atoms, 1, this.vizTypes);
             drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
             drawPolyhedra(this.tjs.scene, this.atoms);
         }
-        else {
+        else if ( this.vizType === 3 ){
             drawBonds(this.tjs.scene, this.atoms, this.bondRadius, this.vizTypes);
         }
 
