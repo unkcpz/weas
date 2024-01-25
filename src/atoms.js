@@ -95,7 +95,6 @@ class Atoms {
     addSpecies(symbol, atomicNumber) {
         // Create a new Species and add it to the species object
         if (!this.species[symbol]) {
-            console.log(symbol, atomicNumber);
             this.species[symbol] = new Species(symbol, atomicNumber);
         }
     }

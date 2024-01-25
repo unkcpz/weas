@@ -1,6 +1,6 @@
 {
   "name": "weas",
-  "version": "0.0.5j",
+  "version": "0.0.5m",
   "type": "module",
   "description": "The weas package, short for Web Environment for Atomic Structures, is a specialized JavaScript library designed to simplify and enhance the visualization and interaction with atomic and molecular structures in web environments.",
   "main": "src/index.js",
@@ -17,6 +17,8 @@
   "license": "MIT",
   "devDependencies": {
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^24.0.0",
     "live-server": "^1.2.2",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"

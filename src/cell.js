@@ -71,9 +71,9 @@ export function drawUnitCellVectors(scene, cell) {
 
     // Add labels for each axis
     const offset = 1.1; // Adjust this to position the labels
-    const aLabel = createLabel('a', new THREE.Vector3(...cell.slice(0, 3)).normalize().multiplyScalar(offset), 'red');
-    const bLabel = createLabel('b', new THREE.Vector3(...cell.slice(3, 6)).normalize().multiplyScalar(offset), 'green');
-    const cLabel = createLabel('c', new THREE.Vector3(...cell.slice(6, 9)).normalize().multiplyScalar(offset), 'blue');
+    const aLabel = createLabel('a', new THREE.Vector3(...cell.slice(0, 3)).normalize().multiplyScalar(offset), 'red', "18px");
+    const bLabel = createLabel('b', new THREE.Vector3(...cell.slice(3, 6)).normalize().multiplyScalar(offset), 'green', "18px");
+    const cLabel = createLabel('c', new THREE.Vector3(...cell.slice(6, 9)).normalize().multiplyScalar(offset), 'blue', "18px");
 
     scene.add(aLabel);
     scene.add(bLabel);

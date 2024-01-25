@@ -5,4 +5,5 @@ export default {
     "js",
   ],
   testRegex: `test\.mjs$`,
+  testEnvironment: 'jsdom',
 };

@@ -1,8 +1,6 @@
 
-## Web Environment Atomistic Structure (WEAS)
-The WEAS package is a specialized JavaScript library designed to simplify and enhance the visualization and interaction with atomic and molecular structures in web environments.
-
-
+## Web Environment For Atomistic Structure (WEAS)
+The WEAS package is a specialized JavaScript library designed to simplify the visualization and interaction with atomistic structures (molecule, crystal, nanoparticle) in the web environments.
 
 
 

@@ -6,7 +6,7 @@ import {findNeighbors } from './utils.js';
 const defaultColor = 0xffffff;
 
 
-export function drawBonds(scene, atoms, radius=0.10, vizTypes) {
+export function drawBonds(scene, atoms, radius=0.10, vizTypes, colorType="CPK") {
     const bonds = calculateBonds(atoms, vizTypes);
 
     console.time("drawBonds Time");
@@ -30,8 +30,8 @@ export function drawBonds(scene, atoms, radius=0.10, vizTypes) {
         const position2 = new THREE.Vector3(...atoms.positions[index2]);
 
         // Setting color for each material
-        const color1 = new THREE.Color(elementColors[atoms.species[atoms.speciesArray[index1]].symbol]);
-        const color2 = new THREE.Color(elementColors[atoms.species[atoms.speciesArray[index2]].symbol]);
+        const color1 = new THREE.Color(elementColors[colorType][atoms.species[atoms.speciesArray[index1]].symbol]);
+        const color2 = new THREE.Color(elementColors[colorType][atoms.species[atoms.speciesArray[index2]].symbol]);
 
         // Calculate transformation for the cylinder
         const midpoint = new THREE.Vector3().lerpVectors(position1, position2, 0.5);

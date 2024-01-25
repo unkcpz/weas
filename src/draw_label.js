@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-export function createLabel(text, position, color = 'black') {
+export function createLabel(text, position, color = 'black', fontSize = '14px') {
     const labelDiv = document.createElement('div');
     labelDiv.className = 'axis-label';
     labelDiv.textContent = text;
     labelDiv.style.color = color;
-    labelDiv.style.fontSize = '14px';
+    labelDiv.style.fontSize = fontSize;
 
     const label = new CSS2DObject(labelDiv);
     label.position.copy(position);
@@ -37,14 +37,14 @@ export function drawAtomLabels(scene, atoms, type = 'symbol', labels = []) {
             symbol = i;
         }
         else if (type === 'none') {
-            return;
+            return labels;
         }
         else {
             console.warn(`Invalid label type: ${type}`);
             return;
         }
         // Create or update the label for each atom
-        const label = createLabel(symbol, position, 'white');
+        const label = createLabel(symbol, position, 'black', "18px");
         scene.add(label);
         labels.push(label); // Store the label for future reference
     }

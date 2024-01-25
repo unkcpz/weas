@@ -6,7 +6,7 @@ import { findNeighbors } from './utils.js';
 
 const defaultColor = 0xffffff;
 
-export function drawPolyhedra(scene, atoms) {
+export function drawPolyhedra(scene, atoms, colorType="CPK") {
     const polyhedraData = calculateCoordinationPolyhedra(atoms);
 
     for (const polyhedra of polyhedraData) {
@@ -20,7 +20,7 @@ export function drawPolyhedra(scene, atoms) {
 
         const geometry = new ConvexGeometry( vertices );
         const symbol = atoms.speciesArray[polyhedra.atomIndex];
-        const color = symbol in elementColors ? elementColors[symbol] : defaultColor;
+        const color = elementColors[colorType][symbol] || defaultColor;
 		const material = new THREE.MeshPhongMaterial({
             color: color,
             specular: 0x111111,

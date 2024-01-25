@@ -52,7 +52,7 @@ export class BlendJS {
         this.init();
     }
     init() {
-        // this.scene.background = new THREE.Color(0xFFFFFF); // Set the scene's background to white
+        this.scene.background = new THREE.Color(0xFFFFFF); // Set the scene's background to white
         // Create a renderer
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(this.containerElement.clientWidth, this.containerElement.clientHeight);
