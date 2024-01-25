@@ -37,8 +37,8 @@ class Atoms {
         }
         if (data.species && typeof data.species === 'object') {
             // Iterate over each key-value pair in the species dictionary
-            Object.entries(data.species).forEach(([symbol, atomicNumber]) => {
-                this.addSpecies(symbol, atomicNumber);
+            Object.entries(data.species).forEach(([symbol, data]) => {
+                this.addSpecies(symbol, data[1]);
             });
         }
         if (data.speciesArray && data.positions) {
@@ -95,6 +95,7 @@ class Atoms {
     addSpecies(symbol, atomicNumber) {
         // Create a new Species and add it to the species object
         if (!this.species[symbol]) {
+            console.log(symbol, atomicNumber);
             this.species[symbol] = new Species(symbol, atomicNumber);
         }
     }
