@@ -3,11 +3,11 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { drawUnitCell, drawUnitCellVectors } from './cell.js';
 import { calculateBonds, drawBonds } from './bond.js';
 import { drawAtoms } from './draw_atoms.js';
-import { clearObjects } from './utils.js';
+import { clearObjects, multiplyMatrixVector } from './utils.js';
 import { createBondMapping, filterBondMap, drawPolyhedra} from './polyhedra.js';
 import { GUIManager } from './GUIManager.js';
 import { EventHandlers } from './EventHandlers.js';
-import { getBoundaryAtoms, searchBoundary } from './boundary.js';
+import { getBoundaryAtoms, searchBoundary, createBoundaryMapping } from './boundary.js';
 import {elementsWithPolyhedra } from './atoms_data.js';
 
 class AtomsViewer {
@@ -29,7 +29,7 @@ class AtomsViewer {
         this.modelTypes = new Array(this.atoms.getAtomsCount()).fill(this.modelType);
         this.showCell = true; // Default show cell
         this.labelType = 'None'; // Default label type
-        this.atomScale = 0.6; // Default atom scale
+        this.atomScale = 0.4; // Default atom scale
         this.bondRadius = 0.1; // Default bond radius
         this.colorType = 'CPK'
         this.materialType = 'Standard'
@@ -78,14 +78,14 @@ class AtomsViewer {
             } else if (modelType === 1) {
                 this.selectedAtoms.forEach((atomIndex) => {
                     this.models["Ball"]["indices"][atomIndex] = 1;
-                    this.models["Ball"]["scales"][atomIndex] = 0.6;
+                    this.models["Ball"]["scales"][atomIndex] = 0.4;
                     this.models["Stick"]["indices"][atomIndex] = 1;
                     this.models["Polyhedra"]["indices"][atomIndex] = 0;
                 });
             } else if (modelType === 2) {
                 this.selectedAtoms.forEach((atomIndex) => {
                     this.models["Ball"]["indices"][atomIndex] = 1;
-                    this.models["Ball"]["scales"][atomIndex] = 0.6;
+                    this.models["Ball"]["scales"][atomIndex] = 0.4;
                     this.models["Stick"]["indices"][atomIndex] = 1;
                     this.models["Polyhedra"]["indices"][atomIndex] = 1;
                 });
@@ -107,11 +107,11 @@ class AtomsViewer {
                 this.models["Ball"]["scales"] = new Array(this.atoms.getAtomsCount()).fill(1);
             } else if (this.modelType === 1) {
                 this.models["Ball"]["indices"] = new Array(this.atoms.getAtomsCount()).fill(1);
-                this.models["Ball"]["scales"] = new Array(this.atoms.getAtomsCount()).fill(0.6);
+                this.models["Ball"]["scales"] = new Array(this.atoms.getAtomsCount()).fill(0.4);
                 this.models["Stick"]["indices"] = new Array(this.atoms.getAtomsCount()).fill(1);
             } else if (this.modelType === 2) {
                 this.models["Ball"]["indices"] = new Array(this.atoms.getAtomsCount()).fill(1);
-                this.models["Ball"]["scales"] = new Array(this.atoms.getAtomsCount()).fill(0.6);
+                this.models["Ball"]["scales"] = new Array(this.atoms.getAtomsCount()).fill(0.4);
                 this.models["Stick"]["indices"] = new Array(this.atoms.getAtomsCount()).fill(1);
                 this.models["Polyhedra"]["indices"] = new Array(this.atoms.getAtomsCount()).fill(1);
             } else if (this.modelType === 3) {
@@ -134,15 +134,18 @@ class AtomsViewer {
     drawModels() {
         console.log("-----------------drawModels-----------------")
         this.dispose();
-        if (this.showCell) {
+        if (this.showCell && this.atoms.cell) {
             drawUnitCell(this.tjs.scene, this.atoms);
             drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
         }
         // find boundary atoms
         this.boundaryList = searchBoundary(this.atoms, this.boundary);
+        this.boundaryMap = createBoundaryMapping(this.boundaryList);
+        console.log("boundaryList: ", this.boundaryList)
+        console.log("boundaryMap: ", this.boundaryMap)
         this.drawBalls();
-        const bondList = this.drawStick();
-        this.drawPolyhedra(bondList);
+        this.drawStick();
+        this.drawPolyhedra();
     }
 
     drawBalls() {
@@ -160,7 +163,8 @@ class AtomsViewer {
                 models["indices"][i] = this.models["Ball"]["indices"][this.boundaryList[i][0]];
                 models["scales"][i] = this.models["Ball"]["scales"][this.boundaryList[i][0]];
             }
-            drawAtoms(this.tjs.scene, boundaryAtoms, 1, models, this.colorType, this.materialType);
+            this.boundaryAtomsMesh = drawAtoms(this.tjs.scene, boundaryAtoms, 1, models, this.colorType, this.materialType);
+            console.log("boundaryAtomsMesh: ", this.boundaryAtomsMesh)
         }
     }
 
@@ -177,15 +181,14 @@ class AtomsViewer {
                 offsets.push(this.boundaryList[i]);
             }
         }
-        const bondList = calculateBonds(this.atoms, offsets);
-        drawBonds(this.tjs.scene, this.atoms, bondList, this.bondRadius, this.colorType, this.materialType);
-        return bondList;
+        this.bondList = calculateBonds(this.atoms, offsets);
+        drawBonds(this.tjs.scene, this.atoms, this.bondList, this.bondRadius, this.colorType, this.materialType);
     }
 
 
-    drawPolyhedra(bondList) {
-        const bondMap = createBondMapping(bondList);
-        const polyhedras = filterBondMap(bondMap, this.atoms.speciesArray, elementsWithPolyhedra, this.models["Polyhedra"]);
+    drawPolyhedra() {
+        this.bondMap = createBondMapping(this.bondList);
+        const polyhedras = filterBondMap(this.bondMap, this.atoms.speciesArray, elementsWithPolyhedra, this.models["Polyhedra"]);
         drawPolyhedra(this.tjs.scene, this.atoms, polyhedras, this.colorType, this.materialType);
     }
 
@@ -267,6 +270,7 @@ class AtomsViewer {
 
     moveSelectedAtoms(initialAtomPositions, movementVector) {
         // For example, translating a selected atom
+        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
         this.selectedAtoms.forEach((atomIndex) => {
             const initialPosition = initialAtomPositions.get(atomIndex);
             const newPosition = initialPosition.clone().add(movementVector);
@@ -277,9 +281,13 @@ class AtomsViewer {
             matrix.setPosition(newPosition);
             this.atomsMesh.setMatrixAt(atomIndex, matrix);
             this.atoms.positions[atomIndex] = [newPosition.x, newPosition.y, newPosition.z];
+            // update the boundary atoms
+            this.updateBoundaryAtomsMesh(atomIndex);
         });
     
         this.atomsMesh.instanceMatrix.needsUpdate = true;
+        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+        
     }
 
     rotateSelectedAtoms(initialAtomPositions, centroid, rotationMatrix) {
@@ -291,16 +299,38 @@ class AtomsViewer {
             newPosition.sub(centroid) // Translate to centroid
                 .applyMatrix4(rotationMatrix) // Apply rotation
                 .add(centroid); // Translate back
-
             // Update the position
             matrix.setPosition(newPosition);
             this.atomsMesh.setMatrixAt(atomIndex, matrix);
-
             // Need to update the atoms.positions array
             this.atoms.positions[atomIndex] = [newPosition.x, newPosition.y, newPosition.z];
+            // update the boundary atoms
+            this.updateBoundaryAtomsMesh(atomIndex);
         });
 
         this.atomsMesh.instanceMatrix.needsUpdate = true;
+        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    updateBoundaryAtomsMesh(atomIndex) {
+        /* When the atom is moved, the boundary atoms should be moved as well.
+        */
+        console.log("atomIndex: ", atomIndex)
+        if (this.boundaryList.length > 0 && this.boundaryMap[atomIndex]) {
+            const atomList = this.boundaryMap[atomIndex];
+            // loop all atomList and update the boundary atoms
+            atomList.forEach((atom) => {
+                const boundaryAtomIndex = atom.index;
+                console.log("boundaryAtomIndex: ", boundaryAtomIndex)
+                const newPosition = this.atoms.positions[atomIndex].map((value, index) => value + multiplyMatrixVector(this.atoms.cell, atom.offset)[index]);
+                // Update the atom position
+                const matrix = new THREE.Matrix4();
+                this.boundaryAtomsMesh.getMatrixAt(boundaryAtomIndex, matrix);
+                matrix.setPosition(new THREE.Vector3(...newPosition));
+                console.log("newPosition: ", newPosition)
+                this.boundaryAtomsMesh.setMatrixAt(boundaryAtomIndex, matrix);
+            });
+        }
     }
 }
 

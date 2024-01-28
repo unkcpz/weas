@@ -23,7 +23,7 @@ class Atoms {
         this.species = {};
         this.speciesArray = [];
         this.positions = [];
-        this.cell = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        this.cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
         this.pbc = [true, true, true];
         this.attributes = {"atom": {}, "species": {}};
 
@@ -235,7 +235,7 @@ class Atoms {
         }
     }
 
-    center(vacuum=null, axis=(0, 1, 2), about=null) {
+    center(vacuum=0.0, axis=(0, 1, 2), center=null) {
         if (!this.cell) {
             throw new Error("Cell is not defined.");
         }
@@ -251,8 +251,8 @@ class Atoms {
 
         // Determine target center point
         let targetCenter = [0, 0, 0];
-        if (about) {
-            targetCenter = about;
+        if (center) {
+            targetCenter = center;
         } else {
             for (let i = 0; i < 3; i++) {
                 if (axis.includes(i)) {

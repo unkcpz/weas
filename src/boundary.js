@@ -24,7 +24,9 @@ export function getBoundaryAtoms(atoms, boundaryList) {
 }
 
 export function searchBoundary(atoms, boundary = [[-0.01, 1.01], [-0.01, 1.01], [-0.01, 1.01]]) {
-    const cell = atoms.cell;
+    if (atoms.cell == null) {
+        return [];
+    }
     let positions = atoms.positions;
     let species = atoms.species; // Assuming species is a property of atoms
 
@@ -81,6 +83,26 @@ export function searchBoundary(atoms, boundary = [[-0.01, 1.01], [-0.01, 1.01], 
     return offsets_b;
 }
 
+
+export function createBoundaryMapping(boundaryList) {
+    /*
+    include both the index and the boundary offset in the boundaryMap.
+    */
+    const boundaryMap = {};
+
+    boundaryList.forEach((boundary, index) => {
+        const atomIndex = boundary[0];
+        const offset = boundary[1];
+
+        if (boundaryMap[atomIndex]) {
+            boundaryMap[atomIndex].push({ "index": index, "offset": offset });
+        } else {
+            boundaryMap[atomIndex] = [{ "index": index, "offset": offset }];
+        }
+    });
+
+    return boundaryMap;
+}
 
 function repeatPositions(positions, repeats) {
     let result = [];

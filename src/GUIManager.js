@@ -142,7 +142,22 @@ class GUIManager {
             mesh.setMatrixAt(i, instanceMatrix);
         }
         mesh.instanceMatrix.needsUpdate = true;
-        // Re-render the scene if necessary
+        // update the boundary atoms
+        mesh = this.viewer.boundaryAtomsMesh
+        for (let i = 0; i < mesh.count; i++) {
+            const instanceMatrix = new THREE.Matrix4();
+            const atomIndex = this.viewer.boundaryList[i][0];
+            const radius = covalentRadii[this.viewer.atoms.speciesArray[atomIndex]] || 1;
+            mesh.getMatrixAt(i, instanceMatrix); // Get the original matrix of the instance
+            // Decompose the original matrix into its components
+            instanceMatrix.decompose(position, rotation, scale);
+            // Set the scale to the new value
+            scale.set(radius*this.viewer.atomScale, radius*this.viewer.atomScale, radius*this.viewer.atomScale);
+            // Recompose the matrix with the new scale
+            instanceMatrix.compose(position, rotation, scale);
+            mesh.setMatrixAt(i, instanceMatrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
     }
 
     updateLabels(value) {

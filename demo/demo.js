@@ -25,6 +25,7 @@ async function drawAtoms(filename) {
        let atoms;
        if (filename.endsWith('.xyz')) {
               atoms = parseXYZ(structureData);
+              atoms.cell = [[10, 0, 0], [0, 10, 0], [0, 0, 10]];
        } else if (filename.endsWith('.cif')) {
               atoms = parseCIF(structureData);
        }

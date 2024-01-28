@@ -17,7 +17,6 @@ export function drawPolyhedra(scene, atoms, polyhedras, colorType="CPK", materia
         const vertex = new THREE.Vector3(...position);
 			vertices.push( vertex );
         }
-        console.log("vertices: ", vertices);
 
         const geometry = new ConvexGeometry( vertices );
         const symbol = atoms.speciesArray[polyhedra.center[0]];
