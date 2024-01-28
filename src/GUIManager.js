@@ -31,7 +31,7 @@ class GUIManager {
     }
 
     addAtomsControl() {
-        const VIZ_TYPE_MAP = {
+        const MODEL_TYPE_MAP = {
             'Ball': 0,
             'Ball + Stick': 1,
             'Polyhedra': 2,
@@ -45,18 +45,44 @@ class GUIManager {
         };
 
         const atomsFolder = this.gui.addFolder('Atoms');
-        atomsFolder.add({ vizType: this.viewer.vizType }, 'vizType', VIZ_TYPE_MAP)
-            .onChange(this.viewer.updateVizType.bind(this.viewer))
+        atomsFolder.add({ modelType: this.viewer.modelType }, 'modelType', MODEL_TYPE_MAP)
+            .onChange(this.viewer.updateModelType.bind(this.viewer))
             .name("Model Style");
         atomsFolder.add({ colorType: this.viewer.colorType }, 'colorType', colorTypes)
             .onChange(this.viewer.updateColorType.bind(this.viewer))
             .name('Color Type');
-        atomsFolder.add(this.viewer, 'labelType', ['none', 'symbol', 'index'])
+        atomsFolder.add(this.viewer, 'labelType', ['None', 'Symbol', 'Index'])
             .onChange(this.updateLabels.bind(this))
             .name('Atom Label');
+        atomsFolder.add(this.viewer, 'materialType', ['Standard', 'Phong'])
+            .onChange(this.viewer.updateMaterialType.bind(this.viewer))
+            .name('Material Type');
         atomsFolder.add(this.viewer, 'atomScale', 0.1, 2.0)
             .onChange(this.updateAtomScale.bind(this))
             .name('Atom Scale');
+        // Add boundary field to GUI
+        const boundaryFolder = atomsFolder.addFolder('Boundary');
+        // Add fields for each boundary value
+        boundaryFolder.add({ minX: this.viewer.boundary[0][0] }, 'minX', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(0, 0, newValue))
+            .name('Min X');
+        boundaryFolder.add({ maxX: this.viewer.boundary[0][1] }, 'maxX', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(0, 1, newValue))
+            .name('Max X');
+        boundaryFolder.add({ minY: this.viewer.boundary[1][0] }, 'minY', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(1, 0, newValue))
+            .name('Min Y');
+        boundaryFolder.add({ maxY: this.viewer.boundary[1][1] }, 'maxY', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(1, 1, newValue))
+            .name('Max Y');
+        boundaryFolder.add({ minZ: this.viewer.boundary[2][0] }, 'minZ', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(2, 0, newValue))
+            .name('Min Z');
+        boundaryFolder.add({ maxZ: this.viewer.boundary[2][1] }, 'maxZ', -10, 10)
+            .onChange(newValue => this.updateBoundaryValue(2, 1, newValue))
+            .name('Max Z');
+        
+        
     }
 
     addColorControl() {
@@ -102,7 +128,7 @@ class GUIManager {
         const rotation = new THREE.Quaternion();
         const scale = new THREE.Vector3();
 
-        let mesh = this.viewer.instancedMesh
+        let mesh = this.viewer.atomsMesh
         for (let i = 0; i < mesh.count; i++) {
             const instanceMatrix = new THREE.Matrix4();
             const radius = covalentRadii[this.viewer.atoms.speciesArray[i]] || 1;
@@ -121,17 +147,22 @@ class GUIManager {
 
     updateLabels(value) {
         // Handle the logic to draw labels based on the selected option
-        if (value === 'none') {
-            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, 'none', this.viewer.atomLabels);
+        if (value === 'None') {
+            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, value, this.viewer.atomLabels);
             // Remove labels
-        } else if (value === 'symbol') {
+        } else if (value === 'Symbol') {
             // Draw labels with symbols
-            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, 'symbol', this.viewer.atomLabels);
-        } else if (value === 'index') {
+            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, value, this.viewer.atomLabels);
+        } else if (value === 'Index') {
             // Draw labels with indices
-            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, 'index', this.viewer.atomLabels);
+            this.viewer.atomLabels = drawAtomLabels(this.viewer.tjs.scene, this.viewer.atoms, value, this.viewer.atomLabels);
         }
     }
+    // Function to update boundary values
+    updateBoundaryValue (dimension, index, value) {
+        this.viewer.boundary[dimension][index] = parseFloat(value);
+        this.viewer.drawModels();
+    };
 }
 
 export { GUIManager };

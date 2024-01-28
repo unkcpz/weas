@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import {elementColors } from './atoms_data.js';
-import {findNeighbors } from './utils.js';
+import {findNeighbors, multiplyMatrixVector } from './utils.js';
+import { materials } from './materials.js';
 
 
 const defaultColor = 0xffffff;
 
 
-export function drawBonds(scene, atoms, radius=0.10, vizTypes, colorType="CPK") {
-    const bonds = calculateBonds(atoms, vizTypes);
+export function drawBonds(scene, atoms, bondList, radius=0.10, colorType="CPK",
+                          materialType="standard") {
 
     console.time("drawBonds Time");
 
@@ -15,19 +16,16 @@ export function drawBonds(scene, atoms, radius=0.10, vizTypes, colorType="CPK") 
 
     const instanceMatrix = new THREE.Matrix4();
 
-    // Creating two instanced meshes, one for each color in the bond
-    const material = new THREE.MeshPhongMaterial({
-        color: defaultColor,
-        specular: 0x222222,
-        shininess: 100,
-        reflectivity: 0.9, // Reflectivity strength for the environment map
-    });
+    const material = materials[materialType].clone();
+    const instancedMesh = new THREE.InstancedMesh(cylinderGeometry, material, bondList.length*2);
 
-    const instancedMesh = new THREE.InstancedMesh(cylinderGeometry, material, bonds.length*2);
-
-    bonds.forEach(([index1, index2], instanceId) => {
-        const position1 = new THREE.Vector3(...atoms.positions[index1]);
-        const position2 = new THREE.Vector3(...atoms.positions[index2]);
+    bondList.forEach(([index1, index2, offset1, offset2], instanceId) => {
+        // console.log(index1, index2, offset1, offset2);
+        var position1 = atoms.positions[index1].map((value, index) => value + multiplyMatrixVector(atoms.cell, offset1)[index]);
+        position1 = new THREE.Vector3(...position1);
+        // update position2 to include offset, dot product with cell
+        var position2 = atoms.positions[index2].map((value, index) => value + multiplyMatrixVector(atoms.cell, offset2)[index]);
+        position2 = new THREE.Vector3(...position2)
 
         // Setting color for each material
         const color1 = new THREE.Color(elementColors[colorType][atoms.species[atoms.speciesArray[index1]].symbol]);
@@ -63,44 +61,16 @@ export function drawBonds(scene, atoms, radius=0.10, vizTypes, colorType="CPK") 
 }
 
 
-
-export function calculateBonds(atoms, vizTypes) {
-    // indices is all atoms with vizType != 0
-    const indices = [];
-    for (let i = 0; i < vizTypes.length; i++) {
-        if (vizTypes[i] !== 0) {
-            indices.push(i);
-        }
-    }
-
+export function calculateBonds(atoms, offsets) {
     // Start timer for findNeighbors
     console.time("findNeighbors Time");
-    const neighbors = findNeighbors(atoms, indices);
+    const neighbors = findNeighbors(atoms, offsets);
     // End timer for findNeighbors
     console.timeEnd("findNeighbors Time");
-    // Start timer for buildBonds
-    console.time("buildBonds Time");
-    const bondsData = buildBonds(neighbors);
-    // End timer for buildBonds
-    console.timeEnd("buildBonds Time");
 
-    return bondsData;
+    return neighbors;
 }
 
-
-export function buildBonds(neighbors) {
-    const bonds = [];
-
-    for (let i = 0; i < neighbors.length; i++) {
-        for (const neighborIndex of neighbors[i]) {
-            if (neighborIndex > i) {
-                bonds.push([i, neighborIndex]); // Add a bond between atom i and its neighbor
-            }
-        }
-    }
-
-    return bonds;
-}
 
 export function createSingleBondSegment(start, end, radius, material) {
     const direction = new THREE.Vector3().subVectors(end, start);

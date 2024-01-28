@@ -4,17 +4,12 @@ import {createLabel} from './draw_label.js';
 
 export function drawUnitCell(scene, atoms) {
     const cell = atoms.cell;
-    if (!cell || cell.length !== 9) {
+    if (!cell || cell.length !== 3 ) {
         console.warn("Invalid or missing unit cell data");
         return;
     }
 
-    // Convert 1x9 array into 3x3 matrix format
-    const cellMatrix = [
-        cell.slice(0, 3), // First vector
-        cell.slice(3, 6), // Second vector
-        cell.slice(6, 9)  // Third vector
-    ];
+    const cellMatrix = cell;
 
     const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
     const points = [];
@@ -50,7 +45,7 @@ export function drawUnitCell(scene, atoms) {
 
 
 export function drawUnitCellVectors(scene, cell) {
-    if (!cell || cell.length !== 9) {
+    if (!cell || cell.length !== 3) {
         console.warn("Invalid or missing unit cell data for vectors");
         return;
     }
@@ -71,9 +66,9 @@ export function drawUnitCellVectors(scene, cell) {
 
     // Add labels for each axis
     const offset = 1.1; // Adjust this to position the labels
-    const aLabel = createLabel('a', new THREE.Vector3(...cell.slice(0, 3)).normalize().multiplyScalar(offset), 'red', "18px");
-    const bLabel = createLabel('b', new THREE.Vector3(...cell.slice(3, 6)).normalize().multiplyScalar(offset), 'green', "18px");
-    const cLabel = createLabel('c', new THREE.Vector3(...cell.slice(6, 9)).normalize().multiplyScalar(offset), 'blue', "18px");
+    const aLabel = createLabel('a', new THREE.Vector3(...cell[0]).normalize().multiplyScalar(offset), 'red', "18px");
+    const bLabel = createLabel('b', new THREE.Vector3(...cell[1]).normalize().multiplyScalar(offset), 'green', "18px");
+    const cLabel = createLabel('c', new THREE.Vector3(...cell[2]).normalize().multiplyScalar(offset), 'blue', "18px");
 
     scene.add(aLabel);
     scene.add(bLabel);

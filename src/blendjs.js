@@ -82,13 +82,13 @@ export class BlendJS {
         // Set initial camera position
         this.camera.position.set(100, 100, 100);
         this.camera.lookAt(0, 0, 0);
+        this.scene.add(this.camera);
         // Create a light
-        const light = new THREE.DirectionalLight( 0xffffff, 2.5 );
-        light.position.set( 1, 1, 1 );
+        const light = new THREE.DirectionalLight( 0xffffff, 2.0 );
+        light.position.set( 50, 50, 100 );
         this.addLight('MainLight', light);
-        const light1 = new THREE.DirectionalLight( 0xffffff, 2.5 );
-        light1.position.set( -1, -1, -1 );
-        this.addLight('SideLight', light1);
+        // Parent the light to the camera
+        this.camera.add(light);
         const ambientLight = new THREE.AmbientLight(0x404040, 20); // Soft white light
         this.addLight('AmbientLight', ambientLight);
         // OrbitControls for camera movement

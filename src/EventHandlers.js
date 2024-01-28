@@ -99,9 +99,14 @@ class EventHandlers {
             // redraw the model to make it work
             // this is a temporary solution
             // it can also update the bonds, etc
-            this.viewer.drawModel();
+            this.viewer.drawModels();
             this.dispatchAtomsUpdated();
+            return;
         }
+        this.pickAtoms(event);
+    }
+
+    pickAtoms(event) {
         // Calculate the distance the mouse moved
         const dx = event.clientX - this.mouseDownPosition.x;
         const dy = event.clientY - this.mouseDownPosition.y;
@@ -124,12 +129,12 @@ class EventHandlers {
 
         // Check for intersections with atom mesh
         // Update the matrix for the instanced mesh
-        this.viewer.instancedMesh.instanceMatrix.needsUpdate = true;
+        this.viewer.atomsMesh.instanceMatrix.needsUpdate = true;
 
         // Optionally, update the matrixWorld if it's been changed
-        this.viewer.instancedMesh.updateMatrixWorld();
+        this.viewer.atomsMesh.updateMatrixWorld();
 
-        const intersects = raycaster.intersectObject(this.viewer.instancedMesh);
+        const intersects = raycaster.intersectObject(this.viewer.atomsMesh);
         // Check if there are intersections
         if (intersects.length > 0) {
             // Get the first intersected object (atom)
@@ -158,9 +163,9 @@ class EventHandlers {
                 this.viewer.createAtomLabel(symbol, position, "black", "18px");
 
                 // Create a new mesh for the highlighted atom
-                const highlightedAtomMesh = createHighlight(position, scale)
-                // Add the highlighted atom mesh to the selectedAtomMesh group
-                this.viewer.selectedAtomMesh.add(highlightedAtomMesh);
+                const highlightedAtomsMesh = createHighlight(position, scale)
+                // Add the highlighted atom mesh to the selectedAtomsMesh group
+                this.viewer.selectedAtomsMesh.add(highlightedAtomsMesh);
             } else {
                 // Clear the HTML element when nothing is selected
                 this.viewer.clearAtomLabel();
@@ -183,6 +188,9 @@ class EventHandlers {
     }
 
     exitTransformMode() {
+        if (!this.transformMode) {
+            return;
+        }
         const mode = this.transformMode
         this.transformMode = null;
         console.log("Exit transformMode: ", mode);
@@ -192,7 +200,7 @@ class EventHandlers {
     storeInitialAtomPositions() {
         this.viewer.selectedAtoms.forEach((atomIndex) => {
             const matrix = new THREE.Matrix4();
-            this.viewer.instancedMesh.getMatrixAt(atomIndex, matrix);
+            this.viewer.atomsMesh.getMatrixAt(atomIndex, matrix);
             const position = new THREE.Vector3();
             matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
             this.initialAtomPositions.set(atomIndex, position.clone());

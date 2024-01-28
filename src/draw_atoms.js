@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { covalentRadii, elementColors } from './atoms_data.js';
+import { materials } from './materials.js';
 
 const defaultColor = 0xffffff;
 
 
-export function drawAtoms(scene, atoms, scaleAtom, vizTypes, colorType="CPK") {
+export function drawAtoms(scene, atoms, scaleAtom, models, colorType="CPK",
+                          materialType="standard") {
     let scale = 1;
     // Create a basic sphere geometry for all atoms
     let radiusSegment = 32;
@@ -20,19 +22,16 @@ export function drawAtoms(scene, atoms, scaleAtom, vizTypes, colorType="CPK") {
     } else {
         radiusSegment = 32;
     }
-    console.log("radiusSegment: ", radiusSegment)
     const atomGeometry = new THREE.SphereGeometry(1, radiusSegment, radiusSegment); // Unit sphere
-    const material = new THREE.MeshPhongMaterial({
-        color: defaultColor,
-        specular: 0x222222,
-        shininess: 100,
-        reflectivity: 0.9, // Reflectivity strength for the environment map
-    });
-
+    const material = materials[materialType].clone()
     // Create a single instanced mesh for all atoms
     const instancedMesh = new THREE.InstancedMesh(atomGeometry, material, atoms.speciesArray.length);
     // Position, scale, and color each atom
     atoms.speciesArray.forEach((symbol, globalIndex) => {
+        // if models[globalIndex] is 0, skip
+        if (models["indices"][globalIndex] === 0) {
+            return;
+        }
         const radius = covalentRadii[symbol] || 1;
         const color = new THREE.Color(elementColors[colorType][symbol] || defaultColor);
 
@@ -40,15 +39,7 @@ export function drawAtoms(scene, atoms, scaleAtom, vizTypes, colorType="CPK") {
         const position = new THREE.Vector3(...atoms.positions[globalIndex]);
         const dummy = new THREE.Object3D();
         dummy.position.copy(position);
-        if (vizTypes[globalIndex] === 0) {
-            scale = scaleAtom*1;
-        } else if (vizTypes[globalIndex] === 1) {
-            scale = scaleAtom*0.6;
-        } else if (vizTypes[globalIndex] === 2) {
-            scale = scaleAtom*0.6;
-        } else if (vizTypes[globalIndex] === 3) {
-            scale = scaleAtom*0;
-        }
+        const scale = models["scales"][globalIndex];
         dummy.scale.set(radius * scale, radius * scale, radius * scale);
         dummy.updateMatrix();
         instancedMesh.setMatrixAt(globalIndex, dummy.matrix);

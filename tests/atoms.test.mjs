@@ -29,7 +29,7 @@ describe('Atoms class', () => {
     expect(atoms.species).toEqual({});
     expect(atoms.speciesArray).toEqual([]);
     expect(atoms.positions).toEqual([]);
-    expect(atoms.cell).toBeNull();
+    expect(atoms.cell).toEqual([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     expect(atoms.pbc).toEqual([true, true, true]);
   });
 
@@ -48,5 +48,23 @@ describe('Atoms class', () => {
   });
 
   // Add more tests for other methods like setCell, addAtom, removeAtom, etc.
+  it('calculateFractionalCoordinates returns correct fractional coordinates', () => {
+      // Define a cell matrix (for simplicity, using an orthogonal matrix)
+      const cellMatrix = [
+          [10, 0, 0],
+          [0, 10, 0],
+          [0, 0, 10]
+      ];
+      // Set the cell matrix
+      atoms.setCell(cellMatrix);
+      // Add a Cartesian position
+      atoms.positions = [[5, 5, 5]];
+      // Expected fractional coordinates
+      const expectedFractionalCoordinates = [[0.5, 0.5, 0.5]];
+      // Calculate fractional coordinates
+      const fractionalCoordinates = atoms.calculateFractionalCoordinates();
+      // Check if the calculated fractional coordinates match the expected ones
+      expect(fractionalCoordinates).toEqual(expectedFractionalCoordinates);
+  });
 });
 

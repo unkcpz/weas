@@ -14,7 +14,7 @@ export function createLabel(text, position, color = 'black', fontSize = '14px') 
     return label;
 }
 
-export function drawAtomLabels(scene, atoms, type = 'symbol', labels = []) {
+export function drawAtomLabels(scene, atoms, type = 'Symbol', labels = []) {
     // Iterate over atoms and update labels
     // Clear existing labels
     if (labels && labels.length > 0) {
@@ -30,13 +30,13 @@ export function drawAtomLabels(scene, atoms, type = 'symbol', labels = []) {
     var symbol
     for (let i = 0; i < atoms.positions.length; i++) {
         const position = new THREE.Vector3(...atoms.positions[i]);
-        if (type === 'symbol') {
+        if (type === 'Symbol') {
             symbol = atoms.species[atoms.speciesArray[i]].symbol;
         }
-        else if (type === 'index') {
+        else if (type === 'Index') {
             symbol = i;
         }
-        else if (type === 'none') {
+        else if (type === 'None') {
             return labels;
         }
         else {

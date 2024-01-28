@@ -1,4 +1,8 @@
-import { covalentRadii } from "./atoms_data.js";
+// I can not use import * as math from "mathjs"
+// it report error: Uncaught TypeError: Cannot set properties of undefined (setting 'math')
+// import * as math from "mathjs"
+import {elementAtomicNumbers} from "./atoms_data.js"
+import {convertToMatrixFromABCAlphaBetaGamma, calculateInverseMatrix} from "./utils.js"
 
 class Species {
     constructor(symbol, atomicNumber) {
@@ -19,9 +23,9 @@ class Atoms {
         this.species = {};
         this.speciesArray = [];
         this.positions = [];
-        this.cell = null;
+        this.cell = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
         this.pbc = [true, true, true];
-        this.properties = {};
+        this.attributes = {"atom": {}, "species": {}};
 
         if (data) {
             this.initializeFromData(data);
@@ -48,43 +52,44 @@ class Atoms {
                 this.addAtom(new Atom(speciesIndex, position));
             }
         }
-        // Initialize other properties if needed
+        // Initialize other attributes if needed
     }
 
-    setCell(cell) {
-        if (cell.length === 9) { // 3x3 matrix
-            this.cell = new Float32Array(cell);
-        } else if (cell.length === 6) { // 1x6 array [a, b, c, alpha, beta, gamma]
-            this.cell = this.convertToMatrixFromABCAlphaBetaGamma(cell);
-        } else if (cell.length === 3) { // 1x3 array [a, b, c], assuming 90-degree angles
-            const [a, b, c] = cell;
-            this.cell = this.convertToMatrixFromABCAlphaBetaGamma([a, b, c, 90, 90, 90]);
+    new_attribute(name, values, domain='atom') {
+        if (domain === 'atom') {
+            // Ensure the length of values matches the number of atoms
+            if (values.length !== this.positions.length) {
+                throw new Error('The number of values does not match the number of atoms.');
+            }
+            this.attributes['atom'][name] = values;
+        } else if (domain === 'species') {
+            // Ensure that values are provided for each species
+            for (const key of Object.keys(this.species)) {
+                if (!(key in values)) {
+                    throw new Error(`Value for species '${key}' is missing.`);
+                }
+            }
+            this.attributes['species'][name] = values;
         } else {
-            throw new Error("Invalid cell dimensions provided. Expected 3x3 matrix, 1x6, or 1x3 array.");
+            throw new Error('Invalid domain. Must be either "atom" or "species".');
         }
     }
 
-    convertToMatrixFromABCAlphaBetaGamma(abcAlphaBetaGamma) {
-        const [a, b, c, alpha, beta, gamma] = abcAlphaBetaGamma;
-        // Convert angles to radians
-        const alphaRad = (alpha * Math.PI) / 180;
-        const betaRad = (beta * Math.PI) / 180;
-        const gammaRad = (gamma * Math.PI) / 180;
-
-        // Calculate components of the cell matrix
-        // Assuming orthorhombic cell (right angles) for simplicity
-        // For triclinic or other cell types, the calculation will be more complex
-        const ax = a;
-        const ay = 0;
-        const az = 0;
-        const bx = b * Math.cos(gammaRad);
-        const by = b * Math.sin(gammaRad);
-        const bz = 0;
-        const cx = c * Math.cos(betaRad);
-        const cy = c * (Math.cos(alphaRad) - Math.cos(betaRad) * Math.cos(gammaRad)) / Math.sin(gammaRad);
-        const cz = Math.sqrt(c * c - cx * cx - cy * cy);
-
-        return new Float32Array([ax, ay, az, bx, by, bz, cx, cy, cz]);
+    setCell(cell) {
+        if (cell.length === 9) { // Convert 1x9 array into 3x3 matrix format
+            this.cell = [[cell[0], cell[1], cell[2]], [cell[3], cell[4], cell[5]], [cell[6], cell[7], cell[8]]];
+        } else if (cell.length === 6) { // 1x6 array [a, b, c, alpha, beta, gamma]
+            this.cell = convertToMatrixFromABCAlphaBetaGamma(cell);
+        } else if (cell.length === 3) { // 1x3 array [a, b, c], assuming 90-degree angles
+            if (cell[0].length === 3) {
+                this.cell = cell;
+            } else {
+                const [a, b, c] = cell;
+                this.cell = convertToMatrixFromABCAlphaBetaGamma([a, b, c, 90, 90, 90]);
+            }
+        } else {
+            throw new Error("Invalid cell dimensions provided. Expected 3x3 matrix, 1x6, or 1x3 array.");
+        }
     }
 
     setPBC(pbc) {
@@ -92,9 +97,15 @@ class Atoms {
         this.pbc = pbc;
     }
 
-    addSpecies(symbol, atomicNumber) {
+    addSpecies(symbol, atomicNumber=null) {
         // Create a new Species and add it to the species object
         if (!this.species[symbol]) {
+            if (atomicNumber === null) {
+                atomicNumber = elementAtomicNumbers[symbol];
+            }
+            if (atomicNumber === undefined) {
+                throw new Error(`Atomic number for species ${symbol} is not defined.`);
+            }
             this.species[symbol] = new Species(symbol, atomicNumber);
         }
     }
@@ -126,27 +137,23 @@ class Atoms {
     // Overload the "+" operator to concatenate two Atoms objects
     add(otherAtoms) {
         const result = new Atoms();
-
         // Concatenate species
-        result.species = [...this.species, ...otherAtoms.species];
-
+        result.species = {...this.species, ...otherAtoms.species};
         // Concatenate positions
-        result.positions = new Float32Array([...this.positions, ...otherAtoms.positions]);
-
-        // Additional properties can be handled here if needed
-
+        result.positions = [...this.positions, ...otherAtoms.positions];
+        // Additional attributes can be handled here if needed
         return result;
     }
 
     // Overload the "+=" operator to concatenate another Atoms object
     addToSelf(otherAtoms) {
         // Concatenate species
-        this.species.push(...otherAtoms.species);
-
+        this.species = {...this.species, ...otherAtoms.species};
         // Concatenate positions
-        this.positions = new Float32Array([...this.positions, ...otherAtoms.positions]);
+        this.positions = [...this.positions, ...otherAtoms.positions];
+        this.speciesArray = [...this.speciesArray, ...otherAtoms.speciesArray];
 
-        // Additional properties can be handled here if needed
+        // Additional attributes can be handled here if needed
     }
 
     multiply(mx, my, mz) {
@@ -156,7 +163,7 @@ class Atoms {
 
         // Update unit cell
         if (this.cell) {
-            const [ax, ay, az, bx, by, bz, cx, cy, cz] = this.cell;
+            const [[ax, ay, az], [bx, by, bz], [cx, cy, cz]] = this.cell;
             newAtoms.setCell([
                 ax * mx, ay * my, az * mz,
                 bx * mx, by * my, bz * mz,
@@ -173,9 +180,9 @@ class Atoms {
                         const [x, y, z] = this.positions[i];
 
                         // Calculate new position considering the unit cell dimensions
-                        const newX = x + ix * this.cell[0];
-                        const newY = y + iy * this.cell[4];
-                        const newZ = z + iz * this.cell[8];
+                        const newX = x + ix * this.cell[0][0];
+                        const newY = y + iy * this.cell[1][1];
+                        const newZ = z + iz * this.cell[2][2];
 
                         // Add the new atom to the newAtoms
                         newAtoms.addAtom(new Atom(species, [newX, newY, newZ]));
@@ -218,12 +225,11 @@ class Atoms {
         }
 
         if (rotate_cell && this.cell) {
-            const newCell = new Float32Array(9);
+            const newCell = Array(3).fill(0).map(() => Array(3).fill(0));
             for (let i = 0; i < 3; i++) {
-                const cellVec = [this.cell[i * 3], this.cell[i * 3 + 1], this.cell[i * 3 + 2]];
-                newCell[i * 3] = matrix[0] * cellVec[0] + matrix[1] * cellVec[1] + matrix[2] * cellVec[2];
-                newCell[i * 3 + 1] = matrix[3] * cellVec[0] + matrix[4] * cellVec[1] + matrix[5] * cellVec[2];
-                newCell[i * 3 + 2] = matrix[6] * cellVec[0] + matrix[7] * cellVec[1] + matrix[8] * cellVec[2];
+                for (let j = 0; j < 3; j++) {
+                    newCell[i][j] = matrix[0 + j] * this.cell[i][0] + matrix[3 + j] * this.cell[i][1] + matrix[6 + j] * this.cell[i][2];
+                }
             }
             this.cell = newCell;
         }
@@ -250,7 +256,7 @@ class Atoms {
         } else {
             for (let i = 0; i < 3; i++) {
                 if (axis.includes(i)) {
-                    targetCenter[i] = this.cell[i * 3 + i] / 2;
+                    targetCenter[i] = this.cell[i][i] / 2;
                 }
             }
         }
@@ -263,11 +269,12 @@ class Atoms {
         if (vacuum !== null) {
             for (let i = 0; i < 3; i++) {
                 if (axis.includes(i)) {
-                    this.cell[i * 3 + i] += 2 * vacuum; // Increase the cell dimension
+                    this.cell[i][i] += 2 * vacuum; // Increase the cell dimension
                 }
             }
         }
     }
+
     deleteAtoms(indices) {
         // Sort the indices in descending order to avoid index shifting
         indices.sort((a, b) => b - a);
@@ -309,6 +316,21 @@ class Atoms {
 
         return dict;
     }
+    // Function to calculate fractional coordinates
+    calculateFractionalCoordinates() {
+        if (!this.cell) {
+            throw new Error("Cell matrix is not defined.");
+        }
+
+        const inverseCell = calculateInverseMatrix(this.cell);
+        return this.positions.map(position => {
+            const fracX = (inverseCell[0][0] * position[0] + inverseCell[0][1] * position[1] + inverseCell[0][2] * position[2]);
+            const fracY = (inverseCell[1][0] * position[0] + inverseCell[1][1] * position[1] + inverseCell[1][2] * position[2]);
+            const fracZ = (inverseCell[2][0] * position[0] + inverseCell[2][1] * position[1] + inverseCell[2][2] * position[2]);
+            return [fracX, fracY, fracZ];
+        });
+    }
+    
 }
 
 
