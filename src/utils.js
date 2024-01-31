@@ -3,7 +3,6 @@ import {covalentRadii } from './atoms_data.js';
 import { kdTree } from './geometry/kdTree.js';
 
 export function findNeighbors(atoms, offsets = null) {
-    
     // If offsets is null, initialize it to include all atoms with zero offset
     if (offsets === null) {
         offsets = atoms.positions.map((_, index) => [index, [0, 0, 0]]);
@@ -55,7 +54,6 @@ export function findNeighbors(atoms, offsets = null) {
         // max neighbors is 12, which is the number of nearest neighbors in a face-centered cubic lattice
         // the closest packed structure
         const potentialNeighbors = tree.nearest(point, 12, (radius1+maxRadius2) ** 2);
-        // console.log("potentialNeighbors: ", potentialNeighbors)
 
         potentialNeighbors.forEach(neighbor => {
             const idx2 = neighbor[0].index;
@@ -72,7 +70,6 @@ export function findNeighbors(atoms, offsets = null) {
             }
         });
     });
-    // console.log("neighbors: ", neighbors)
 
     return neighbors;
 }
@@ -98,43 +95,24 @@ export function clearObjects(scene, uuid=null) {
 
         // Check if the object is not a camera or a light
         if (!(child instanceof THREE.Camera) && !(child instanceof THREE.Light)) {
-            scene.remove(child);
-
-            // Dispose geometry and material if they exist
-            if (child.geometry) {
-                child.geometry.dispose();
-            }
-            if (child.material) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(material => material.dispose());
-                } else {
-                    child.material.dispose();
-                }
-            }
+            clearObject(scene, child);
         }
     });
 }
 
-
-export function createHighlight(position, scale) {
-    const highlightGeometry = new THREE.SphereGeometry(1, 32, 32); // Unit sphere
-    const highlightMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(0xffff00), // Yellow color
-        transparent: true, // Make it transparent
-        opacity: 0.5, // Set the transparency level (0.0 to 1.0)
-    });
-    const scaleMultiplier = 1.4; // Adjust the scale factor as needed (1.1 makes it slightly larger)
-    const highlightedAtomMesh = new THREE.Mesh(highlightGeometry, highlightMaterial);
-    highlightedAtomMesh.position.copy(position)
-    // Scale the highlighted atom mesh
-    highlightedAtomMesh.scale.set(
-        scale.x * scaleMultiplier,
-        scale.y * scaleMultiplier,
-        scale.z * scaleMultiplier
-    );
-    return highlightedAtomMesh
+export function clearObject(scene, obj) {
+    scene.remove(obj);
+    if (obj.geometry) {
+        obj.geometry.dispose();
+    }
+    if (obj.material) {
+        if (Array.isArray(obj.material)) {
+            obj.material.forEach(material => material.dispose());
+        } else {
+            obj.material.dispose();
+        }
+    }
 }
-
 
 export function getWorldPositionFromScreen(screenX, screenY, camera, plane) {
     const ndc = new THREE.Vector2(

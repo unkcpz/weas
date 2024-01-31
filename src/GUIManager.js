@@ -54,7 +54,7 @@ class GUIManager {
         atomsFolder.add(this.viewer, 'labelType', ['None', 'Symbol', 'Index'])
             .onChange(this.updateLabels.bind(this))
             .name('Atom Label');
-        atomsFolder.add(this.viewer, 'materialType', ['Standard', 'Phong'])
+        atomsFolder.add(this.viewer, 'materialType', ['Standard', 'Phong', 'Basic'])
             .onChange(this.viewer.updateMaterialType.bind(this.viewer))
             .name('Material Type');
         atomsFolder.add(this.viewer, 'atomScale', 0.1, 2.0)

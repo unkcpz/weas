@@ -3,6 +3,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>
+
+        .selectBox {
+            border: 1px solid #55aaff;
+            background-color: rgba(75, 160, 255, 0.3);
+            position: fixed;
+        }
+    </style>
 </head>
 <body>
     <script type="importmap">
@@ -12,18 +20,19 @@
                 "dat.gui": "../node_modules/dat.gui/build/dat.gui.module.js",
                 "three/examples/jsm/renderers/CSS2DRenderer.js": "../node_modules/three/examples/jsm/renderers/CSS2DRenderer.js",
                 "three/examples/jsm/geometries/ConvexGeometry.js": "../node_modules/three/examples/jsm/geometries/ConvexGeometry.js",
-                "three/examples/jsm/controls/OrbitControls.js": "../node_modules/three/examples/jsm/controls/OrbitControls.js"
+                "three/examples/jsm/interactive/SelectionBox.js": "../node_modules/three/examples/jsm/interactive/SelectionBox.js",
+                "three/examples/jsm/interactive/SelectionHelper.js": "../node_modules/three/examples/jsm/interactive/SelectionHelper.js"
                 
             }
         }
     </script>
     <h1>WEAS (Web Environment For Atomistic Structures)</h1>
     <select id="structure-selector">
-        <option value="c2h6so.xyz">C2H6SO</option>
         <option value="tio2.cif">TiO2</option>
+        <option value="c2h6so.xyz">C2H6SO</option>
         <option value="au.cif">Au</option>
     </select>
-    <div id="viewer" style="position: absolute; width: 100%; height: 100%;"></div>
+    <div id="viewer" style="position: absolute; width: 800px; height: 800px;"></div>
     <script type="module" src="demo.js"></script>
 </body>
 </html>

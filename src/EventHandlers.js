@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { createHighlight, getWorldPositionFromScreen } from './utils.js';
+import { getWorldPositionFromScreen } from './utils.js';
+import {SelectionBox } from 'three/examples/jsm/interactive/SelectionBox.js';
+import {SelectionHelper } from 'three/examples/jsm/interactive/SelectionHelper.js';
 
 class EventHandlers {
     constructor(viewer) {
@@ -13,10 +15,15 @@ class EventHandlers {
         // Add mouse state tracking
         this.isMouseDown = false;
         this.mouseDownPosition = new THREE.Vector2();
+        this.mouseUpPosition = new THREE.Vector2();
         this.mousePosition = new THREE.Vector2();
         this.initialAtomPositions = new Map(); // To store initial positions of selected atoms
         this.transformMode = null; // 'move' or 'rotate'
-    }
+        this.boxselect = false;
+        this.dragMode = null; // 'move' or 'rotate'
+		this.selectionBox = new SelectionBox(this.tjs.camera, this.tjs.scene );
+		this.helper = new SelectionHelper(this.tjs.renderers["MainRenderer"].renderer, 'selectBox' );
+        }
 
     setupEventListeners() {
         const container = this.viewer.tjs.containerElement;
@@ -33,17 +40,23 @@ class EventHandlers {
         // Implement the logic for mouse down events
         this.isMouseDown = true;
         this.mouseDownPosition.set(event.clientX, event.clientY);
+        const viewerRect = this.tjs.containerElement.getBoundingClientRect();
+        let x = ((event.clientX - viewerRect.left) / viewerRect.width) * 2 - 1;
+        let y = -((event.clientY - viewerRect.top) / viewerRect.height) * 2 + 1;
+        this.selectionBox.startPoint.set(x, y, 0.5 );
+        this.oldSelectedAtomsIndices = this.viewer.selectedAtomsIndices;
+        // Calculate mouse position in normalized device coordinates
+
     }
 
     onMouseUp(event) {
         // Implement the logic for mouse up events
         this.isMouseDown = false;
-    }
-
-    onMouseClick(event) {
-        // Implement the logic for mouse click events
-        // This might include selecting atoms, updating the model, etc.
-        this.viewer.onMouseClick(event);
+        this.mouseUpPosition.set(event.clientX, event.clientY);
+        const viewerRect = this.tjs.containerElement.getBoundingClientRect();
+        let x = ((event.clientX - viewerRect.left) / viewerRect.width) * 2 - 1;
+        let y = -((event.clientY - viewerRect.top) / viewerRect.height) * 2 + 1;
+        this.selectionBox.startPoint.set(x, y, 0.5 );
     }
 
     onMouseMove(event) {
@@ -53,6 +66,20 @@ class EventHandlers {
             this.moveSelectedAtoms(event);
         } else if (this.transformMode === 'rotate') {
             this.rotateSelectedAtoms(event);
+        } else if (this.isMouseDown  && event.shiftKey) {
+            this.boxselect = true;
+            const viewerRect = this.tjs.containerElement.getBoundingClientRect();
+            let x = ((event.clientX - viewerRect.left) / viewerRect.width) * 2 - 1;
+            let y = -((event.clientY - viewerRect.top) / viewerRect.height) * 2 + 1;
+            this.selectionBox.endPoint.set(
+                x, y,
+                0.5 );
+            
+            this.selectionBox.select();
+            // add the selected atoms to the selectedAtoms set
+            const selectedAtomsIndicesFromBox = new Set(this.selectionBox.instances[this.viewer.atomsMesh.uuid]);
+            this.viewer.selectedAtomsIndices = new Set([...this.oldSelectedAtomsIndices, ...selectedAtomsIndicesFromBox]);
+            this.viewer.drawHighlightAtoms();
         }
     }
 
@@ -103,10 +130,6 @@ class EventHandlers {
             this.dispatchAtomsUpdated();
             return;
         }
-        this.pickAtoms(event);
-    }
-
-    pickAtoms(event) {
         // Calculate the distance the mouse moved
         const dx = event.clientX - this.mouseDownPosition.x;
         const dy = event.clientY - this.mouseDownPosition.y;
@@ -116,7 +139,11 @@ class EventHandlers {
         if (distanceMoved > 5) {
             return; // Ignore clicks that involve dragging
         }
+        this.pickAtoms(event);
+    }
 
+    pickAtoms(event) {
+        console.log("Pick atoms");
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -144,39 +171,28 @@ class EventHandlers {
             if (selectedObject.userData && selectedObject.userData.type === 'atom') {
                 // Get the instance index of the selected atom
                 const instanceIndex = intersects[0].instanceId;
-                if (this.viewer.selectedAtoms.has(instanceIndex)) {
-                    // If the atom is already selected, skip
-                    return;
+                if (this.viewer.selectedAtomsIndices.has(instanceIndex)) {
+                    // If the atom is already selected, unselect it
+                    this.viewer.selectedAtomsIndices.delete(instanceIndex);
+                } else {
+                    // Add the instance index to the selectedAtoms set
+                    this.viewer.selectedAtomsIndices.add(instanceIndex);
+                    const symbol = this.viewer.atoms.species[this.viewer.atoms.speciesArray[instanceIndex]].symbol;
+                    const position = new THREE.Vector3(...this.viewer.atoms.positions[instanceIndex]);
+                    this.viewer.createAtomLabel(symbol, position, "black", "18px");
                 }
-                // Add the instance index to the selectedAtoms set
-                this.viewer.selectedAtoms.add(instanceIndex);
-
-                // Get the position of the selected atom in the 3D space
-                const matrix = new THREE.Matrix4();
-                selectedObject.getMatrixAt(instanceIndex, matrix);
-                const position = new THREE.Vector3();
-                const quaternion = new THREE.Quaternion();
-                const scale = new THREE.Vector3();
-                matrix.decompose(position, quaternion, scale);
-                // Display the symbol of the atom on top of it
-                const symbol = this.viewer.atoms.species[this.viewer.atoms.speciesArray[instanceIndex]].symbol;
-                this.viewer.createAtomLabel(symbol, position, "black", "18px");
-
-                // Create a new mesh for the highlighted atom
-                const highlightedAtomsMesh = createHighlight(position, scale)
-                // Add the highlighted atom mesh to the selectedAtomsMesh group
-                this.viewer.selectedAtomsMesh.add(highlightedAtomsMesh);
+                this.viewer.drawHighlightAtoms();
             } else {
                 // Clear the HTML element when nothing is selected
                 this.viewer.clearAtomLabel();
-                this.viewer.selectedAtoms.clear();
-                this.viewer.clearHighlight();
+                this.viewer.selectedAtomsIndices.clear();
+                this.viewer.clearHighlightAtoms();
             }
         } else {
             // Clear the HTML element when nothing is selected
             this.viewer.clearAtomLabel();
-            this.viewer.selectedAtoms.clear();
-            this.viewer.clearHighlight();
+            this.viewer.selectedAtomsIndices.clear();
+            this.viewer.clearHighlightAtoms();
         }
     }
 
@@ -198,7 +214,7 @@ class EventHandlers {
     }
 
     storeInitialAtomPositions() {
-        this.viewer.selectedAtoms.forEach((atomIndex) => {
+        this.viewer.selectedAtomsIndices.forEach((atomIndex) => {
             const matrix = new THREE.Matrix4();
             this.viewer.atomsMesh.getMatrixAt(atomIndex, matrix);
             const position = new THREE.Vector3();
@@ -225,10 +241,10 @@ class EventHandlers {
     rotateSelectedAtoms(event) {
         // Calculate the centroid of the selected atoms
         let centroid = new THREE.Vector3(0, 0, 0);
-        this.viewer.selectedAtoms.forEach((atomIndex) => {
+        this.viewer.selectedAtomsIndices.forEach((atomIndex) => {
             centroid.add(this.initialAtomPositions.get(atomIndex));
         });
-        centroid.divideScalar(this.viewer.selectedAtoms.size);
+        centroid.divideScalar(this.viewer.selectedAtomsIndices.size);
 
         // Project the centroid to 2D screen space
         const centroidScreen = centroid.clone().project(this.tjs.camera);
@@ -236,13 +252,15 @@ class EventHandlers {
         // Calculate normalized device coordinates of centroid, initial, and new mouse positions
         const centroidNDC = new THREE.Vector2(centroidScreen.x, centroidScreen.y);
         
+        const viewerRect = this.tjs.containerElement.getBoundingClientRect();
         const initialNDC = new THREE.Vector2(
-            (this.initialMousePosition.x / this.tjs.containerElement.clientWidth) * 2 - 1,
-            -(this.initialMousePosition.y / this.tjs.containerElement.clientHeight) * 2 + 1
+            ((this.initialMousePosition.x - viewerRect.left) / viewerRect.width) * 2 - 1,
+            -((this.initialMousePosition.y - viewerRect.top) / viewerRect.height) * 2 + 1
         );
+
         const newNDC = new THREE.Vector2(
-            (event.clientX / this.tjs.containerElement.clientWidth) * 2 - 1,
-            -(event.clientY / this.tjs.containerElement.clientHeight) * 2 + 1
+            ((event.clientX - viewerRect.left) / viewerRect.width) * 2 - 1,
+            -((event.clientY - viewerRect.top) / viewerRect.height) * 2 + 1
         );
         // Calculate vectors from centroidNDC to initialNDC and newNDC
         const vectorToInitial = new THREE.Vector2().subVectors(initialNDC, centroidNDC);

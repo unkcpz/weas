@@ -5,9 +5,8 @@ import { materials } from './materials.js';
 const defaultColor = 0xffffff;
 
 
-export function drawAtoms(scene, atoms, scaleAtom, models, colorType="CPK",
+export function drawAtoms(scene, atoms, models, colorType="CPK",
                           materialType="standard") {
-    let scale = 1;
     // Create a basic sphere geometry for all atoms
     let radiusSegment = 32;
     // change radiusSegment based on number of atoms
@@ -51,7 +50,10 @@ export function drawAtoms(scene, atoms, scaleAtom, models, colorType="CPK",
 
     // Update instance
     instancedMesh.instanceMatrix.needsUpdate = true
-    instancedMesh.instanceColor.needsUpdate = true;
+    // if instancedMesh has instanceColor, update it
+    if (instancedMesh.instanceColor) {
+        instancedMesh.instanceColor.needsUpdate = true;
+    }
 
     scene.add(instancedMesh);
     return instancedMesh;

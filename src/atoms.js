@@ -330,6 +330,43 @@ class Atoms {
             return [fracX, fracY, fracZ];
         });
     }
+
+    getAtomsByIndices(indices) {
+        const newAtomsData = {
+            cell: JSON.parse(JSON.stringify(this.cell)),
+            pbc: JSON.parse(JSON.stringify(this.pbc)),
+            species: { ...this.species }, // Shallow copy is usually sufficient for an object of primitives
+            speciesArray: [],
+            positions: []
+        };
+    
+        // Initialize attributes for the new Atoms instance
+        const newAttributes = { "atom": {}, "species": {} };
+        for (const domain in this.attributes) {
+            for (const name in this.attributes[domain]) {
+                newAttributes[domain][name] = (domain === "atom") ? [] : this.attributes[domain][name];
+            }
+        }
+    
+        indices.forEach(index => {
+            if (index < 0 || index >= this.positions.length) {
+                throw new Error('Index out of bounds.');
+            }
+            // Add species and position for each atom
+            newAtomsData.speciesArray.push(this.speciesArray[index]);
+            newAtomsData.positions.push(this.positions[index]);
+    
+            // Add attributes for each atom
+            for (const name in this.attributes['atom']) {
+                newAttributes['atom'][name].push(this.attributes['atom'][name][index]);
+            }
+        });
+    
+        const newAtoms = new Atoms(newAtomsData);
+        newAtoms.attributes = newAttributes;
+    
+        return newAtoms;
+    }
     
 }
 

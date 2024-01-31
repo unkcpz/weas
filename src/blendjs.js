@@ -1,6 +1,6 @@
 // Import necessary Three.js components
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { OrbitControls } from './three/OrbitControls.js';
 import {CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 class BlendJSObject {
@@ -93,6 +93,8 @@ export class BlendJS {
         this.addLight('AmbientLight', ambientLight);
         // OrbitControls for camera movement
         this.controls = new OrbitControls(this.camera, renderer.domElement);
+        // Disable shift behavior
+        // this.controls.enablePan = true; // This line disables panning
         // this.controls.enableDamping = true; // Enable smooth camera movements
         // Add event listener for window resize
         window.addEventListener('resize', this.onWindowResize.bind(this), false);

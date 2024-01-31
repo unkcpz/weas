@@ -29,7 +29,7 @@ async function drawAtoms(filename) {
        } else if (filename.endsWith('.cif')) {
               atoms = parseCIF(structureData);
        }
-       atoms = atoms.multiply(1, 1, 1); // Assuming this is necessary for your setup
+       atoms = atoms.multiply(2, 2, 2); // Assuming this is necessary for your setup
        const avr = new AtomsViewer(bjs, atoms);
        avr.boundary = [[-0.05, 1.05], [-0.05, 1.05], [-0.05, 1.05]];
        // avr.boundary = [[-5, 6], [-5, 6], [-5, 6]];

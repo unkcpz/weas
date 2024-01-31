@@ -15,5 +15,12 @@ const standarMaterial = new THREE.MeshStandardMaterial( {
     envMapIntensity: 1.0
 } );
 
+const basicMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(0xffff00), // Yellow color
+    transparent: true, // Make it transparent
+    opacity: 1, // Set the transparency level (0.0 to 1.0)
+});
 
-export const materials = {"Phong": phongMaterial, "Standard": standarMaterial}
+export const materials = {"Phong": phongMaterial,
+                        "Standard": standarMaterial,
+                        "Basic": basicMaterial}
