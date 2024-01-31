@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { getWorldPositionFromScreen } from './utils.js';
 import {SelectionBox } from 'three/examples/jsm/interactive/SelectionBox.js';
-import {SelectionHelper } from 'three/examples/jsm/interactive/SelectionHelper.js';
+import {SelectionHelper } from './three/SelectionHelper.js';
 
 class EventHandlers {
     constructor(viewer) {

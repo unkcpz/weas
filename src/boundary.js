@@ -24,7 +24,7 @@ export function getBoundaryAtoms(atoms, boundaryList) {
 }
 
 export function searchBoundary(atoms, boundary = [[-0.01, 1.01], [-0.01, 1.01], [-0.01, 1.01]]) {
-    if (atoms.cell == null) {
+    if (atoms.isUndefinedCell()) {
         return [];
     }
     let positions = atoms.positions;

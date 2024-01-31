@@ -46,9 +46,9 @@ class AtomsViewer {
 
         // Initialize Three.js scene, camera, and renderer
         //
-        this.selectedAtomSIndicesymbolElement = document.createElement('div');
-        this.selectedAtomSIndicesymbolElement.id = 'selectedAtomSymbol';
-        this.tjs.containerElement.appendChild(this.selectedAtomSIndicesymbolElement);
+        this.selectedAtomsLabelElement = document.createElement('div');
+        this.selectedAtomsLabelElement.id = 'selectedAtomSymbol';
+        this.tjs.containerElement.appendChild(this.selectedAtomsLabelElement);
         // Initialize components
         this.guiManager = new GUIManager(this);
         this.eventHandlers = new EventHandlers(this);
@@ -134,15 +134,13 @@ class AtomsViewer {
     drawModels() {
         console.log("-----------------drawModels-----------------")
         this.dispose();
-        if (this.showCell && this.atoms.cell) {
+        if (this.showCell && !this.atoms.isUndefinedCell()) {
             drawUnitCell(this.tjs.scene, this.atoms);
             drawUnitCellVectors(this.tjs.scene, this.atoms.cell, this.tjs.camera);
         }
         // find boundary atoms
         this.boundaryList = searchBoundary(this.atoms, this.boundary);
         this.boundaryMap = createBoundaryMapping(this.boundaryList);
-        console.log("boundaryList: ", this.boundaryList)
-        console.log("boundaryMap: ", this.boundaryMap)
         this.drawBalls();
         this.drawStick();
         this.drawPolyhedra();
@@ -164,7 +162,6 @@ class AtomsViewer {
                 models["scales"][i] = this.models["Ball"]["scales"][this.boundaryList[i][0]];
             }
             this.boundaryAtomsMesh = drawAtoms(this.tjs.scene, boundaryAtoms, models, this.colorType, this.materialType);
-            console.log("boundaryAtomsMesh: ", this.boundaryAtomsMesh)
         }
     }
 
@@ -224,7 +221,7 @@ class AtomsViewer {
         this.tjs.containerElement.removeEventListener('mousemove', this.onMouseMove, false);
         this.tjs.containerElement.removeEventListener('keydown', this.onKeyDown, false);
         // Remove the selected atom symbol element
-        // this.tjs.containerElement.removeChild(this.selectedAtomSIndicesymbolElement);
+        // this.tjs.containerElement.removeChild(this.selectedAtomsLabelElement);
         // Remove the selected atom mesh group
         // this.tjs.scene.remove(this.selectedAtomsMesh);
         // Remove the atom labels
@@ -242,16 +239,16 @@ class AtomsViewer {
 
     createAtomLabel(symbol, position, color = 'black', fontSize = '14px') {
         // Create or update the HTML element for displaying the symbol
-        if (!this.selectedAtomSIndicesymbolElement) {
-            this.selectedAtomSIndicesymbolElement = document.createElement('div');
-            this.selectedAtomSIndicesymbolElement.id = 'selectedAtomSymbol';
-            this.selectedAtomSIndicesymbolElement.style.position = 'absolute';
-            this.selectedAtomSIndicesymbolElement.style.color = 'white'; // Customize styles as needed
-            this.selectedAtomSIndicesymbolElement.style.pointerEvents = 'none'; // Prevent the symbol from blocking mouse interactions
-            this.tjs.containerElement.appendChild(this.selectedAtomSIndicesymbolElement);
+        if (!this.selectedAtomsLabelElement) {
+            this.selectedAtomsLabelElement = document.createElement('div');
+            this.selectedAtomsLabelElement.id = 'selectedAtomSymbol';
+            this.selectedAtomsLabelElement.style.position = 'absolute';
+            this.selectedAtomsLabelElement.style.color = 'white'; // Customize styles as needed
+            this.selectedAtomsLabelElement.style.pointerEvents = 'none'; // Prevent the symbol from blocking mouse interactions
+            this.tjs.containerElement.appendChild(this.selectedAtomsLabelElement);
         }
         // Create a new CSS2DObject with the label content
-        this.label = new CSS2DObject(this.selectedAtomSIndicesymbolElement);
+        this.label = new CSS2DObject(this.selectedAtomsLabelElement);
         this.label.position.copy(position);
         this.label.element.textContent = symbol;
 
@@ -290,7 +287,6 @@ class AtomsViewer {
 
     moveSelectedAtoms(initialAtomPositions, movementVector) {
         // For example, translating a selected atom
-        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
         this.selectedAtomsIndices.forEach((atomIndex) => {
             const initialPosition = initialAtomPositions.get(atomIndex);
             const newPosition = initialPosition.clone().add(movementVector);
@@ -306,7 +302,10 @@ class AtomsViewer {
         });
     
         this.atomsMesh.instanceMatrix.needsUpdate = true;
-        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+        // if boundaryAtomsMesh has instanceMatrix, update it
+        if (this.boundaryAtomsMesh) {
+            this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+        }
         
     }
 
@@ -329,7 +328,10 @@ class AtomsViewer {
         });
 
         this.atomsMesh.instanceMatrix.needsUpdate = true;
-        this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+        // if boundaryAtomsMesh has instanceMatrix, update it
+        if (this.boundaryAtomsMesh) {
+            this.boundaryAtomsMesh.instanceMatrix.needsUpdate = true;
+        }
     }
 
     updateBoundaryAtomsMesh(atomIndex) {

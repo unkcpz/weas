@@ -1,7 +1,7 @@
 // Import necessary Three.js components
 import * as THREE from 'three';
 import { OrbitControls } from './three/OrbitControls.js';
-import {CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+import {CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 class BlendJSObject {
     constructor(name, geometry, material) {
@@ -137,7 +137,14 @@ export class BlendJS {
 
     onWindowResize() {
         // Update the camera aspect ratio and the renderer size based on the container element
-        this.camera.aspect = this.containerElement.clientWidth / this.containerElement.clientHeight;
+        if (this.camera.isOrthographicCamera) {
+            const aspect = this.containerElement.clientWidth / this.containerElement.clientHeight;
+            const frustumHeight = this.camera.top - this.camera.bottom;
+            this.camera.left = -frustumHeight * aspect / 2;
+            this.camera.right = frustumHeight * aspect / 2;
+        } else {
+            this.camera.aspect = this.containerElement.clientWidth / this.containerElement.clientHeight;
+        }
         this.camera.updateProjectionMatrix();
         // loop through renderers to update their size
         Object.values(this.renderers).forEach(rndr => {

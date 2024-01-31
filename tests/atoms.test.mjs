@@ -29,7 +29,7 @@ describe('Atoms class', () => {
     expect(atoms.species).toEqual({});
     expect(atoms.speciesArray).toEqual([]);
     expect(atoms.positions).toEqual([]);
-    expect(atoms.cell).toEqual([[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
+    expect(atoms.cell).toEqual([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
     expect(atoms.pbc).toEqual([true, true, true]);
   });
 

@@ -23,7 +23,7 @@ class Atoms {
         this.species = {};
         this.speciesArray = [];
         this.positions = [];
-        this.cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+        this.cell = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
         this.pbc = [true, true, true];
         this.attributes = {"atom": {}, "species": {}};
 
@@ -92,6 +92,10 @@ class Atoms {
         }
     }
 
+    isUndefinedCell () {
+        return this.cell.some(row => row.every(cell => cell === 0));
+    }
+
     setPBC(pbc) {
         // Set periodic boundary conditions (e.g., [true, true, true])
         this.pbc = pbc;
@@ -157,6 +161,9 @@ class Atoms {
     }
 
     multiply(mx, my, mz) {
+        if (this.isUndefinedCell()) {
+            throw new Error("Cell matrix is not defined.");
+        }
         const newAtoms = new Atoms();
         // Copy species object
         newAtoms.species = JSON.parse(JSON.stringify(this.species));
@@ -318,7 +325,7 @@ class Atoms {
     }
     // Function to calculate fractional coordinates
     calculateFractionalCoordinates() {
-        if (!this.cell) {
+        if (this.isUndefinedCell()) {
             throw new Error("Cell matrix is not defined.");
         }
 
